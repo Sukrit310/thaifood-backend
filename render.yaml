@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: thaifood-guide-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: feat/thaifood-guide-backend
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: PORT
+        value: "8080"

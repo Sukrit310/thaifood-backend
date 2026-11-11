@@ -1,0 +1,7 @@
+.git
+.env
+.env.*
+bin
+coverage.out
+.superpowers
+node_modules
