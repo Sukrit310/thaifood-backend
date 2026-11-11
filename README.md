@@ -112,6 +112,8 @@ npx newman run postman/ThaiFood_Guide.postman_collection.json \
 
 เก็บ environment ที่มีรหัสผ่านจริงไว้นอก Git; ดูผลการตรวจล่าสุดใน [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md)
 
+เมื่อรันผ่าน Render ให้ตั้ง `allowEdgeSqlProbeBlock=true` ใน private Postman environment เพื่อระบุผลเฉพาะ SQL probe สุดท้ายที่ Cloudflare WAF บล็อกด้วย403 ค่าเริ่มต้นยังตรวจ200JSONอย่างเคร่งครัด และทุก API ปกติยังใช้ Contract เดิม ดูรายละเอียดใน [postman/README.md](postman/README.md)
+
 ## Deploy Render
 
 `render.yaml` ตั้ง Docker web service, free plan, Singapore, branch `feat/thaifood-guide-backend`, health check `/health` และปิด auto deploy เพื่อให้ทดสอบก่อนแต่ละ release ไม่มีการสร้างฐานข้อมูล Render เพราะใช้ Supabase
@@ -124,4 +126,12 @@ npx newman run postman/ThaiFood_Guide.postman_collection.json \
 6. รอ deployment สถานะ live แล้วตรวจ `/health`, ร้าน, Register/Login/Profile/Review/Favorites และ Admin ผ่าน Postman อีกครั้ง
 7. ส่ง Render URL จริงให้ Frontend ตั้ง `REACT_APP_API_URL` และ rebuild CRA
 
-Render API URL ยังไม่ถูกสร้างใน repository นี้ URL ตัวอย่างทั้งหมดเป็น placeholder จนกว่าจะตั้ง Supabase และ deploy สำเร็จ
+API ที่ deploy แล้ว: **https://thaifood-guide-api-a7c7.onrender.com**
+
+Health: https://thaifood-guide-api-a7c7.onrender.com/health
+
+ใช้งาน Supabase project `xorsagxmphehnjurquen` ผ่าน Session pooler พร้อม TLS; Render service อยู่บน Free plan ที่ Singapore และตั้ง `/health` แล้ว ไม่มีการเปลี่ยน MovieHub ต้นแบบ
+
+CORS ปัจจุบันอนุญาต `http://localhost:3000` เท่านั้น ผู้ใช้จะเพิ่ม URL Vercel ภายหลัง โดย append origin จริงใน `ALLOWED_ORIGINS` แล้ว deploy ให้ค่าใหม่มีผล ดู [คู่มือส่งต่องาน Frontend](docs/FRONTEND_HANDOFF.md)
+
+สำหรับ FE ตั้ง `REACT_APP_API_URL=https://thaifood-guide-api-a7c7.onrender.com` และ rebuild CRA หลังแก้ค่า

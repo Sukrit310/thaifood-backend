@@ -3,7 +3,7 @@
     "_postman_id": "1d820b10-b73e-4594-8ef5-5d68ce54df8d",
     "name": "ThaiFood Guide API Contract v2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control."
+    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control. The allowEdgeSqlProbeBlock environment option defaults to false. Opt in only for Render-hosted verification to classify the final SQL-injection probe as blocked by the positively identified upstream Cloudflare WAF; all application responses remain strict Contract checks. See postman/README.md."
   },
   "event": [
     {
@@ -31,7 +31,25 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if (pm.response.code === 204) {",
+          "pm.variables.set(\"__edgeSqlProbeBlocked\", false);",
+          "const edgeSqlProbeBlocked = pm.environment.get(\"allowEdgeSqlProbeBlock\") === \"true\"",
+          "  && /^https:\\/\\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.onrender\\.com\\/?$/i.test(pm.variables.replaceIn(\"{{baseUrl}}\"))",
+          "  && pm.info.requestName === \"64 SQL metacharacters remain data\"",
+          "  && pm.response.code === 403",
+          "  && /^cloudflare$/i.test(pm.response.headers.get(\"Server\") || \"\")",
+          "  && Boolean((pm.response.headers.get(\"CF-Ray\") || \"\").trim())",
+          "  && /^text\\/html(?:;|$)/i.test(pm.response.headers.get(\"Content-Type\") || \"\")",
+          "  && pm.response.text().includes(\"Your request was blocked by this site's web application firewall (WAF).\");",
+          "if (edgeSqlProbeBlocked) {",
+          "  pm.variables.set(\"__edgeSqlProbeBlocked\", true);",
+          "  pm.test(\"Explicit Render SQL-probe WAF block\", function () {",
+          "    pm.response.to.have.status(403);",
+          "    pm.expect(pm.response.headers.get(\"Server\")).to.match(/^cloudflare$/i);",
+          "    pm.expect(pm.response.headers.get(\"CF-Ray\")).to.be.a(\"string\").and.not.empty;",
+          "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^text\\/html(?:;|$)/i);",
+          "    pm.expect(pm.response.text()).to.include(\"Your request was blocked by this site's web application firewall (WAF).\");",
+          "  });",
+          "} else if (pm.response.code === 204) {",
           "  pm.test(\"204 has no response body\", function () { pm.expect(pm.response.text()).to.eql(\"\"); });",
           "} else {",
           "  pm.test(\"JSON response content type\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
@@ -2082,8 +2100,16 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
-              "pm.test(\"SQL input is a literal search\", function () { pm.expect(pm.response.json().items).to.eql([]); pm.expect(pm.response.json().total).to.eql(0); });"
+              "if (pm.variables.get(\"__edgeSqlProbeBlocked\") === true) {",
+              "  pm.test(\"HTTP 403 from upstream WAF\", function () { pm.response.to.have.status(403); });",
+              "  pm.test(\"SQL probe blocked by identified upstream WAF\", function () {",
+              "    pm.expect(pm.response.text()).to.include(\"Your request was blocked by this site's web application firewall (WAF).\");",
+              "    pm.expect(pm.response.headers.get(\"CF-Ray\")).to.be.a(\"string\").and.not.empty;",
+              "  });",
+              "} else {",
+              "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "  pm.test(\"SQL input is a literal search\", function () { pm.expect(pm.response.json().items).to.eql([]); pm.expect(pm.response.json().total).to.eql(0); });",
+              "}"
             ]
           }
         }

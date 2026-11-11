@@ -33,7 +33,7 @@
 - [x] 4. Runtime/tooling: bounded pool, timeouts, graceful shutdown, migrate/admin commands, local test PostgreSQL setup, Postman collection and CI.
 - [x] 5. Real PostgreSQL API integration: guest/auth/profile/password/search/review/favorite/admin paths, errors, injection, stale role, constraints and cascade.
 - [x] 6. Review and verification: gofmt, go vet, go test -race, build, Postman runner and secret review.
-- [ ] 7. Deployment: confirm target Supabase and Render workspace, migrate/seed, test Supabase-backed API, push feature branch, create/update Render service, wait live and smoke test. If credentials/target remain unavailable, report the specific external prerequisite without claiming deployment.
+- [x] 7. Deployment: confirm target Supabase and Render workspace, migrate/seed, test Supabase-backed API, push feature branch, create/update Render service, wait live and smoke test. If credentials/target remain unavailable, report the specific external prerequisite without claiming deployment.
 
 ## Review Focus
 
@@ -48,4 +48,4 @@
 - Tasks1–6 complete: PostgreSQL17 real API/store tests,71 test/subtest passes with race detector,64 Newman requests/296 assertions, zero failures, vet/build/Docker/schema validation passed.
 - Independent reviews: invalid UTF-8 filter finding fixed with failing-then-passing regression; runtime pgx mode verified by Newman against built binary.
 - Security scan: Go1.27.3 standard-library finding fixed by toolchain/Docker/CI Go1.27.4; final govulncheck clean.
-- Task7 pending external configuration: no ThaiFood DATABASE_URL; only inactive movie-hub-db discovered; Render workspace confirmation and actual FE origin requested via async questions. No remote database or Render resources changed.
+- Task 7 complete (2026-11-12 Asia/Bangkok): the user supplied the Supabase project/pooler credentials and explicitly authorized transfer to the confirmed Render service. Migration/seed and 8 integration tests passed on Supabase; predeploy Postman passed 64 requests / 296 assertions. Render deploy dep-dbqacjijnfac73dbf24g of commit 53cdab8 is live at https://thaifood-guide-api-a7c7.onrender.com. Live Postman passed 64 requests / 294 assertions with one explicitly identified upstream WAF 403 SQL probe; the default strict Go/Supabase probe still requires 200 JSON and passes. Removed 7 recorded temporary accounts and verified final health 200. The original MovieHub repo/service is unchanged. The user deferred the Vercel origin; localhost CORS is configured and the handoff documents the next step.

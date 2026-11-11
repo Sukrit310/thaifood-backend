@@ -1,6 +1,6 @@
 # ผลการตรวจ ThaiFood Guide Backend
 
-Session date: 2026-11-11. ตรวจใน repository `Sukrit310/thaifood-backend` บน branch `feat/thaifood-guide-backend` โดยไม่มีการแก้ repository MovieHub ต้นแบบ
+ตรวจระบบ local วันที่ 2026-11-11 และ Supabase/Render วันที่ 2026-11-12 (Asia/Bangkok). ตรวจใน repository `Sukrit310/thaifood-backend` บน branch `feat/thaifood-guide-backend` โดยไม่มีการแก้ repository MovieHub ต้นแบบ
 
 ## สภาพแวดล้อมและผล
 
@@ -42,10 +42,32 @@ Review แยกตรวจพบ invalid UTF-8 filter ซึ่งแก้แ
 
 Raw Newman report มี test credentials/JWT จึงเก็บนอก repository และไม่ commit; ไฟล์นี้บันทึกเฉพาะผลสรุป ไม่มี secrets
 
-## สิ่งที่ยังไม่ได้ยืนยันบนระบบจริง
+## Supabase และ Render จริง
 
-- ยังไม่มี `DATABASE_URL` ของ Supabase สำหรับ ThaiFood ใน environment; connected project ที่พบคือ `movie-hub-db` สถานะ INACTIVE จึงไม่เปลี่ยนข้อมูลหรือสถานะของโปรเจกต์นั้น
-- ยังไม่ได้เลือก/ยืนยัน Render workspace และยังไม่ทราบ URL Vercel จริง จึงไม่ได้สร้าง service หรือ deploy
-- ยังไม่มี Render API URL จริง และยังไม่ได้ทดสอบผ่าน Supabase/Render จริง
+- Supabase project: `xorsagxmphehnjurquen`, PostgreSQL17.11 ผ่าน Session pooler/TLS ตรวจแล้วว่า public schema ว่างก่อนใช้ schema.sql และ seed.sql
+- หลัง seed มี77จังหวัด,7ประเภท,25ร้านสมมติ ข้อมูลอยู่ใน Supabase จริง
+- รัน `go test -race -count=1 -v ./store ./integration` กับ Supabase ใน schema ทดสอบแยก ผ่าน8 top-level tests และลบ schema ทดสอบเมื่อเสร็จ
+- Postman ก่อน deploy ผ่าน Go runtimeที่เชื่อม Supabase จริง64requests/296assertions/0failures
+- [GitHub Actions Backend checks](https://github.com/Sukrit310/thaifood-backend/actions/runs/43065005725) ของ commit `53cdab8` ผ่าน formatting,vet,race testsและbuild
+- Render service: `thaifood-guide-api-a7c7` (`srv-dbqaciqjnfac73dbf0f0`), Free/Docker/Singapore,health path `/health`,manual deploy
+- Deploy `dep-dbqacjijnfac73dbf24g` ของ commit `53cdab8` ขึ้นสถานะliveแล้ว
+- API URL: https://thaifood-guide-api-a7c7.onrender.com
+- Live smoke ผ่านDB health,77จังหวัด,localhost CORS preflightและการปฏิเสธoriginที่ไม่อนุญาต
 
-เมื่อกำหนดเป้าหมายและ credentials แล้ว ต้องรัน migrate/seed, ทดสอบ API ที่เชื่อม Supabase, deploy branch ที่ผ่าน checks, รอ Render สถานะ live และทดสอบ Postman ซ้ำก่อนถือว่าการ deploy เสร็จ
+### SQL probe ที่ชั้น Cloudflare
+
+PostmanรอบแรกบนRender:63requestsผ่านตามContract; request64ที่จำลองSQL injectionได้403HTMLจากCloudflare WAF ทำให้4assertionsที่คาด200JSONไม่ผ่าน หน้าresponseระบุว่าถูก web application firewall บล็อก พร้อมCF-Ray การป้องกันนี้อยู่ก่อนGo ([Renderอธิบายว่าทุกrequestผ่านCloudflare](https://render.com/docs/uptime-best-practices#log-the-cf-ray-id-of-each-request))
+
+การค้นหาSQL metacharactersที่Go/Supabaseโดยตรงผ่านการทดสอบแล้ว ไม่มีการเปลี่ยนSQL queriesหรือปิดWAFเพื่อแก้ผลทดสอบ Collectionคงstrict200JSONเป็นค่าเริ่มต้น และเพิ่มตัวเลือก `allowEdgeSqlProbeBlock=true` สำหรับการตรวจRenderเท่านั้น ซึ่งต้องตรวจrequestสุดท้าย,HTTPS onrender.com,403,Server Cloudflare,CF-Ray,HTML Content-Typeและข้อความWAFที่ตรงกันก่อนยอมรับการบล็อก ทุกrequestอื่นยังตรวจContractเดิม
+
+### ผลตรวจ live หลังระบุชั้นตอบกลับอย่างชัดเจน
+
+- PostmanบนRenderผ่าน64requests/294assertions/0failures โดย63requestsตรวจContractของGoตามเดิม และ1SQLprobeยืนยัน403จากCloudflare WAFด้วยเงื่อนไขเฉพาะข้างต้น
+- หลังแก้collection รันSQLprobeผ่านGo/Supabaseโดยตรงซ้ำด้วยค่าเริ่มต้นstrict ผ่าน1request/5assertions ยังคงต้องได้200JSONและผลค้นหาว่าง
+- ไม่ได้เปลี่ยนGo API/SQLหรือปิดการป้องกันของRenderเพื่อให้ผลทดสอบผ่าน
+- ลบเฉพาะบัญชีชั่วคราว7บัญชีที่บันทึกid/emailจากผลทดสอบแล้ว;เหลือ77จังหวัด/7ประเภท/25ร้านสมมติ และไม่มีสมาชิก/รีวิว/Favoritesทดสอบค้างในฐานข้อมูล
+- ยืนยันว่าJWTของAdminทดสอบที่ลบแล้วได้401 และhealthหลังcleanupยังได้200
+
+### Frontend ที่ยังรอ URL จริง
+
+ผู้ใช้ยืนยันให้เพิ่ม Vercel origin ภายหลัง CORSปัจจุบันจึงอนุญาตเฉพาะ `http://localhost:3000` ดู[Frontend handoff](FRONTEND_HANDOFF.md)สำหรับการตั้ง `REACT_APP_API_URL` และappendโดเมนจริงในRender `ALLOWED_ORIGINS`
