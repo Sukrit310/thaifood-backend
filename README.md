@@ -24,7 +24,7 @@ internal/config/    environment validation
 integration/        HTTP → Go → PostgreSQL ทดสอบทุก endpoint
 main.go             server, pgxpool, graceful shutdown, DB/admin commands
 schema.sql          ตาราง, FK, CHECK, indexes, RLS (รันซ้ำได้)
-seed.sql            77 จังหวัด, 7 ประเภท, 25 ร้านสมมติ (รันซ้ำได้)
+seed.sql            77 จังหวัด, 7 ประเภท, 20 ร้านจริงพร้อมรูปและเครดิต (รันซ้ำได้)
 postman/            collection และ environment ตัวอย่าง
 render.yaml         Render Blueprint
 Dockerfile          build แบบหลาย stage ใช้ non-root runtime
@@ -54,7 +54,11 @@ go run . serve
 
 Go เป็นผู้เข้าถึงฐานข้อมูลเพียงจุดเดียว ตารางเปิด RLS และไม่ให้ `anon`/`authenticated` อ่านหรือเขียนผ่าน Supabase Data API; `DATABASE_URL` จึงต้องเป็น database owner ที่เชื่อถือได้ Schema/seed ต้องใช้กับฐานข้อมูลของ ThaiFood เท่านั้น
 
-ชุดร้านเริ่มต้นเป็น **ร้านสมมติที่ผู้จัดทำสร้างเองเพื่อสาธิตระบบ** มีคำบอกในชื่อ/รายละเอียดและ `source_name`/`source_url` ภายในฐานข้อมูล ไม่มีภาพหรือคะแนนที่คัดลอกจาก Google ข้อมูลทั้งหมดที่ API ส่งอ่านจาก PostgreSQL สามารถเพิ่มร้านที่มีสิทธิ์ใช้งานจริงผ่าน Admin API ได้
+ชุดร้านเริ่มต้นเป็น **ร้านจริง 20 ร้านใน 9 จังหวัด พร้อมรูปที่ตรงกับร้านและเครดิตภาพ** ใช้ข้อมูล ททท. จาก data.go.th 19 ร้าน และข้อมูลจากผู้ประกอบการโดยตรง 1 ร้าน ภาพแต่ละรูปมาจาก Wikimedia Commons พร้อมสัญญาอนุญาตของรูปนั้น ที่มาและเครดิตอยู่ใน `description` และมี `source_name`/`source_url` ในฐานข้อมูล ดู [แหล่งข้อมูลและใบอนุญาตภาพ](docs/RESTAURANT_DATA_SOURCES.md) ข้อมูลเป็น snapshot ไม่รับรองสถานะเปิดทำการล่าสุด และไม่สร้างที่อยู่/พิกัดที่แหล่งข้อมูลไม่มี คะแนนยังคำนวณจากรีวิวของสมาชิกในเว็บเท่านั้น
+
+นำเข้าฐานข้อมูลที่ Render API ใช้แล้วเมื่อ 2026-11-12 ดู [ผลนำเข้าและการทดสอบข้อมูลจริง](docs/REAL_DATA_IMPORT_RESULTS.md)
+
+การรัน `go run . seed` จาก revision นี้จะนำเข้าร้านจริงและลบเฉพาะร้านสมมติชุดเดิมที่ไม่เคยถูกแก้ไขและไม่มีรีวิวหรือรายการโปรดอ้างถึง ร้านที่สมาชิกใช้งานแล้วและร้านที่ผู้ดูแลเพิ่มหรือแก้ไขเองยังคงอยู่ รันซ้ำไม่เพิ่มร้านซ้ำและไม่ทับข้อมูลที่ Admin แก้ภายหลัง ใช้ source/build ของ revision นี้ เพราะ binary เก่าฝัง seed สมมติไว้ ก่อนใช้กับฐานข้อมูลจริงให้สำรองข้อมูลและตรวจ `DATABASE_URL` ว่าเป็นโปรเจกต์ ThaiFood
 
 ## สร้าง Admin
 

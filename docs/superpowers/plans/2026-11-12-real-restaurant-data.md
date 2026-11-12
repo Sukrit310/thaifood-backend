@@ -1,0 +1,16 @@
+# Real restaurant data and photographs
+
+**Goal:** Replace the fictional demonstration restaurants served by the existing Go API with a curated set of 20 real restaurants, each with a photograph of that restaurant, its food, or its premises and visible attribution. Preserve the existing JSON contract and all member data.
+
+**Approach:** Import 19 restaurant records from the TAT `restaurant1` open JSON dataset supplied by the user, and factual details for Breezeo from its operator's official site. Use individually licensed Wikimedia Commons photographs matched by restaurant identity and province. Do not import external ratings. Keep the 77 provinces and 7 categories. No Google/Foursquare credentials or new paid services are needed. The TAT snapshot contains no photo fields, so it cannot independently satisfy the image requirement.
+
+**Scope:** Change seed data and its provenance documentation, plus regression tests for real images and safe retirement of fictional data. The current FE already reads `imageUrl` and `description`; no FE or CORS change is needed for this data import. Do not alter the user's existing `.env.example` edit, Moviehub, member accounts, reviews, or favorites.
+
+1. Add a failing database test for seeded real restaurants with HTTPS photographs and credit, and a regression test that reseeding preserves user-linked fictional records, genuine restaurant edits, reviews, and favorites.
+2. Replace the fictional seed section with the reviewed real records. Use stable source identifiers and `ON CONFLICT DO NOTHING`; retire only untouched, unreferenced rows with the exact old fictional source identity. Preserve admin-edited old samples as well. Lock review/favorite writes during retirement to prevent concurrent cascades.
+3. Record dataset retrieval date, snapshot checksum, raw source IDs, field mappings, individual photo authors/licenses, and limitations in `docs/RESTAURANT_DATA_SOURCES.md`. Update current README and FE handoff; keep historical test results identifiable as historical.
+4. Run Go tests/race/vet/build and the real database tests in isolated schemas. Verify every image URL returns an image and visually inspect representative photographs. A deployed FE browser check requires its actual URL; the supplied repository can be checked for field compatibility.
+5. Save a restricted backup of only the original fictional restaurant rows, recheck member/review/favorite counts, apply the seed to the authorized ThaiFood database, apply it again to prove idempotency, and verify public Render list/detail/filter endpoints and images. The running Go application does not cache restaurant rows, so a code deployment is unnecessary.
+6. Review and push the feature branch with only task files, report the imported count and evidence, and describe the FE environment settings if needed. Do not merge into `main` automatically.
+
+**Data limitations:** Public snapshots describe real businesses but do not guarantee present opening status. Missing street details and coordinates remain missing rather than invented. All photos must be checked for their own license; the dataset's license does not imply rights to third-party images. Use concise factual summaries and include photo credit, file link and license link in `description`, which the existing FE renders.

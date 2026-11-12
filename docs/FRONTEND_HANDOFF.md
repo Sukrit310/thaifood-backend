@@ -9,6 +9,7 @@ Render ขึ้นสถานะ live และทดสอบ Auth/Profile/Re
 Frontend ใช้ Create React App ให้ตั้ง environment ต่อไปนี้ทั้งเครื่องพัฒนาและ Vercel:
 
 ```dotenv
+REACT_APP_USE_MOCK=false
 REACT_APP_API_URL=https://thaifood-guide-api-a7c7.onrender.com
 ```
 
@@ -40,7 +41,9 @@ export async function getRestaurants(province) {
 
 JSON ใช้ camelCase เช่น `imageUrl`, `displayName`, `reviewCount` ร้านไม่มีรีวิวส่ง `rating: null`, `reviewCount: 0`; อย่าแปลง null เป็นคะแนนศูนย์ คะแนนจากรีวิวในเว็บเต็ม 5 และ `imageUrl` อาจเป็น null ผลค้นหาว่างยังตอบ 200 พร้อม `items: []`
 
-ข้อมูลเริ่มต้น 25 ร้านเป็นร้านสมมติที่ผู้จัดทำสร้างเองเพื่อสาธิต มีระบุในชื่อ/รายละเอียด ไม่ควรนำเสนอว่าเป็นร้านจริงที่ผ่านการตรวจสอบ
+ข้อมูลเริ่มต้นปัจจุบันเป็นร้านจริง 20 ร้านใน 9 จังหวัดพร้อม `imageUrl` ของภาพที่ตรงกับร้าน ใช้ข้อมูล ททท. และผู้ประกอบการ พร้อมเครดิต/สัญญาอนุญาตภาพใน `description` ให้แสดงรายละเอียดส่วนนี้ต่อไป ดู [แหล่งข้อมูลและใบอนุญาตภาพ](RESTAURANT_DATA_SOURCES.md) คะแนนยังมาจากรีวิวในระบบเอง ไม่ใช่คะแนน Google และข้อมูล snapshot ไม่รับรองสถานะเปิดทำการล่าสุด
+
+FE repository ที่ผู้ใช้ส่งมาอ่าน `restaurant.imageUrl` อยู่แล้ว และใช้ SVG เมื่อรูปเป็น null หรือโหลดไม่ได้ จึงไม่ต้องเปลี่ยนชื่อฟิลด์ หากต้องการข้อมูลจาก Backend จริง ให้ตั้ง `REACT_APP_USE_MOCK=false` คู่กับ `REACT_APP_API_URL` แล้ว restart/rebuild CRA; ค่าเริ่มต้นของ FE ยังเป็น mock หากไม่ตั้งตัวแปรนี้
 
 ## สมาชิกและข้อผิดพลาด
 

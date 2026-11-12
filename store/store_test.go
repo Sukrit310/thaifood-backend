@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,7 +69,7 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 25 || len(items) != 25 {
+	if total != 20 || len(items) != 20 {
 		t.Fatalf("seed duplicate/missing restaurants: %d/%d", total, len(items))
 	}
 	for _, r := range items {
@@ -82,6 +83,105 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	}
 	if unsecured != 0 {
 		t.Fatalf("%d tables missing RLS", unsecured)
+	}
+}
+
+func TestSeedProvidesRealRestaurantsWithAttributedPhotos(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	items, _, err := s.ListRestaurants(ctx, RestaurantFilter{Page: 1, Limit: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range items {
+		if r.ImageURL == nil {
+			t.Fatalf("restaurant %q has no real photograph", r.Name)
+		}
+		u, err := url.Parse(*r.ImageURL)
+		if err != nil || u.Scheme != "https" || (u.Host != "thumb.wikimedia.org" && u.Host != "upload.wikimedia.org") {
+			t.Fatalf("restaurant %q has an invalid photograph URL", r.Name)
+		}
+		if strings.Contains(r.Name, "สมมติ") || strings.Contains(r.Address, "สมมติ") {
+			t.Fatalf("fictional restaurant remains in a fresh seed: %q", r.Name)
+		}
+		for _, required := range []string{"ที่มาข้อมูล:", "ภาพ:", "https://commons.wikimedia.org/", "https://creativecommons.org/"} {
+			if !strings.Contains(r.Description, required) {
+				t.Fatalf("restaurant %q is missing data/image attribution %q", r.Name, required)
+			}
+		}
+	}
+}
+
+func TestReseedRetiresOnlyUntouchedUnreferencedFictionalRestaurants(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	m, err := s.CreateMember(ctx, "seed-preservation@example.com", "test-only-hash", "Seed preservation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]int64, 4)
+	for i := range ids {
+		err := s.Pool.QueryRow(ctx, `INSERT INTO restaurants(name,province_id,category_id,address,description,source_name,source_url)
+			SELECT 'ร้านตัวอย่างสมมติ ทดสอบ',p.id,c.id,'ที่อยู่สมมติ','ข้อมูลสมมติ',
+			'ThaiFood Guide author-created fictional sample',$1
+			FROM provinces p CROSS JOIN categories c WHERE p.name_th='เชียงใหม่' AND c.name_th='อาหารเหนือ' RETURNING id`,
+			fmt.Sprintf("urn:thaifood-guide:fictional-sample:test:%d", i)).Scan(&ids[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.CreateReview(ctx, ids[1], m.ID, 5, "รีวิวนี้ต้องไม่ถูกลบเมื่อปรับชุดข้อมูล"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateFavorite(ctx, m.ID, ids[2]); err != nil {
+		t.Fatal(err)
+	}
+	editedName := "ร้านที่ผู้ดูแลปรับจากข้อมูลตัวอย่าง"
+	if _, err := s.UpdateRestaurant(ctx, ids[3], RestaurantInput{Name: &editedName}); err != nil {
+		t.Fatal(err)
+	}
+	var adminCreatedID int64
+	err = s.Pool.QueryRow(ctx, `INSERT INTO restaurants(name,province_id,category_id,address,description)
+		SELECT 'ร้านตัวอย่างสมมติที่ผู้ดูแลเพิ่มเอง',p.id,c.id,'ที่อยู่ทดสอบ','ข้อมูลที่ผู้ดูแลเพิ่มเอง'
+		FROM provinces p CROSS JOIN categories c WHERE p.name_th='เชียงใหม่' AND c.name_th='อาหารเหนือ' RETURNING id`).Scan(&adminCreatedID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Edits to real source records must survive reseeding.
+	var editedID int64
+	err = s.Pool.QueryRow(ctx, `UPDATE restaurants SET description='คำอธิบายที่ผู้ดูแลแก้ไข'
+		WHERE id=(SELECT min(id) FROM restaurants WHERE source_name IS DISTINCT FROM 'ThaiFood Guide author-created fictional sample') RETURNING id`).Scan(&editedID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := os.ReadFile(filepath.Join("..", "seed.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if _, err := s.Pool.Exec(ctx, string(seed)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.RestaurantByID(ctx, ids[0]); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unused fictional restaurant was not retired: %v", err)
+	}
+	for _, id := range []int64{ids[1], ids[2], ids[3], adminCreatedID} {
+		if _, err := s.RestaurantByID(ctx, id); err != nil {
+			t.Fatalf("member-linked or admin-edited restaurant %d was removed: %v", id, err)
+		}
+	}
+	r, err := s.RestaurantByID(ctx, editedID)
+	if err != nil || r.Description != "คำอธิบายที่ผู้ดูแลแก้ไข" {
+		t.Fatalf("reseed overwrote a restaurant edit: %v", err)
+	}
+	reviews, err := s.ListReviews(ctx, ids[1])
+	if err != nil || len(reviews) != 1 || reviews[0].Rating != 5 {
+		t.Fatalf("reseed changed existing reviews: %v", err)
+	}
+	favorites, err := s.ListFavorites(ctx, m.ID)
+	if err != nil || len(favorites) != 1 || favorites[0].ID != ids[2] {
+		t.Fatalf("reseed changed existing favorites: %v", err)
 	}
 }
 
@@ -189,7 +289,7 @@ func TestDatabaseConstraintsProtectInvalidDirectWrites(t *testing.T) {
 	if _, err = s.Pool.Exec(ctx, `UPDATE restaurants SET latitude=91,longitude=100 WHERE id=$1`, list[0].ID); err == nil {
 		t.Fatal("out-of-range coordinate accepted")
 	}
-	if _, err = s.Pool.Exec(ctx, `UPDATE restaurants SET latitude=18 WHERE id=$1`, list[0].ID); err == nil {
+	if _, err = s.Pool.Exec(ctx, `UPDATE restaurants SET latitude=18,longitude=NULL WHERE id=$1`, list[0].ID); err == nil {
 		t.Fatal("unpaired coordinate accepted")
 	}
 }
