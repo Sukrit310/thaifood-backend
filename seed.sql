@@ -1,4 +1,4 @@
--- Idempotent reference data and 30 real restaurants.
+-- Idempotent reference data and 53 real restaurants.
 -- Sources and individual photo licenses: docs/RESTAURANT_DATA_SOURCES.md
 -- Retrieved 2026-11-12. Ratings are calculated only from this site's reviews.
 BEGIN;
@@ -537,6 +537,339 @@ WITH additional_places(name,province_name,category_name,address,description,lati
 INSERT INTO restaurants(name,province_id,category_id,address,description,latitude,longitude,image_url,source_name,source_url)
 SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.longitude::double precision,s.image_url,s.source_name,s.source_url
 FROM additional_places s
+JOIN provinces p ON p.name_th=s.province_name
+JOIN categories c ON c.name_th=s.category_name
+ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
+
+-- Additional real places: 23 previously empty provinces (2026-11-13).
+-- INSERT-only: existing restaurants, reviews and favorites are preserved.
+WITH additional_places_23(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
+    ('จันทรโภชนา สาขาเบญจมราชูทิศ',
+     'จันทบุรี',
+     'อาหารไทย',
+     '102/5-8 อำเภอเมืองจันทบุรี จังหวัดจันทบุรี 22000',
+     'ร้านอาหารพื้นเมืองจันทบุรี ภาพแสดงหน้าร้านสาขาเบญจมราชูทิศพร้อมป้ายชื่อจันทรโภชนา
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20111207100227545)
+ภาพ: Good Restaurant - panoramio.jpg — Adriaan Castermans / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=53959758 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Good_Restaurant_-_panoramio.jpg/960px-Good_Restaurant_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20111207100227545'),
+    ('Ploy Samet',
+     'ระยอง',
+     'อาหารไทย',
+     'เกาะเสม็ด จังหวัดระยอง',
+     'ร้าน Ploy Samet บนเกาะเสม็ด ภาพเก่าแสดงพื้นที่รับประทานอาหารริมทะเลและสะพานไม้ของร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=46517329)
+ภาพ: Ploy samet 2 - panoramio.jpg — Boonchai C / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=46517329 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Ploy_samet_2_-_panoramio.jpg/960px-Ploy_samet_2_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=46517329'),
+    ('Benz Thai Restaurant (Soneva Kiri)',
+     'ตราด',
+     'อาหารไทย',
+     'Soneva Kiri เกาะกูด จังหวัดตราด',
+     'ร้านอาหารไทย Benz ที่ Soneva Kiri บนเกาะกูด ภาพแสดงระเบียงไม้และบรรยากาศริมน้ำของร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=55170137)
+ภาพ: Ko Kut, Soneva Kiri, Benz Thai Restaurant - panoramio (1).jpg — josef knecht / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=55170137 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Ko_Kut%2C_Soneva_Kiri%2C_Benz_Thai_Restaurant_-_panoramio_%281%29.jpg/960px-Ko_Kut%2C_Soneva_Kiri%2C_Benz_Thai_Restaurant_-_panoramio_%281%29.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=55170137'),
+    ('ร้านบะหมี่หยกเป็ดย่าง',
+     'ฉะเชิงเทรา',
+     'อาหารไทย',
+     'บางวัว จังหวัดฉะเชิงเทรา',
+     'ร้านบะหมี่หยกเป็ดย่างในย่านบางวัว ภาพแสดงหน้าร้านและจุดเตรียมบะหมี่ เกี๊ยว ปู และหมูแดง
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=57268397)
+ภาพ: ร้านบะหมี่หยกเป็ดย่าง - panoramio.jpg — กอบแก้ว เสวีวัลลภ / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=57268397 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%9A%E0%B8%B0%E0%B8%AB%E0%B8%A1%E0%B8%B5%E0%B9%88%E0%B8%AB%E0%B8%A2%E0%B8%81%E0%B9%80%E0%B8%9B%E0%B9%87%E0%B8%94%E0%B8%A2%E0%B9%88%E0%B8%B2%E0%B8%87_-_panoramio.jpg/960px-%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%9A%E0%B8%B0%E0%B8%AB%E0%B8%A1%E0%B8%B5%E0%B9%88%E0%B8%AB%E0%B8%A2%E0%B8%81%E0%B9%80%E0%B8%9B%E0%B9%87%E0%B8%94%E0%B8%A2%E0%B9%88%E0%B8%B2%E0%B8%87_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=57268397'),
+    ('โอวทึ้ง นายกี๋ (ลอดช่อง)',
+     'เพชรบุรี',
+     'คาเฟ่',
+     'อำเภอเมืองเพชรบุรี จังหวัดเพชรบุรี 76000',
+     'ร้านของหวานโอวทึ้ง นายกี๋ ในเมืองเพชรบุรี ภาพแสดงไอศกรีมกาแฟเสิร์ฟในถ้วยแก้วที่ร้าน
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20200929113946475689)
+ภาพ: ไอศรีมกาแฟ โอวทึ้งนายกี๋ เพชรบุรี - panoramio.jpg — dusitm / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=56743914 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/%E0%B9%84%E0%B8%AD%E0%B8%A8%E0%B8%A3%E0%B8%B5%E0%B8%A1%E0%B8%81%E0%B8%B2%E0%B9%81%E0%B8%9F_%E0%B9%82%E0%B8%AD%E0%B8%A7%E0%B8%97%E0%B8%B6%E0%B9%89%E0%B8%87%E0%B8%99%E0%B8%B2%E0%B8%A2%E0%B8%81%E0%B8%B5%E0%B9%8B_%E0%B9%80%E0%B8%9E%E0%B8%8A%E0%B8%A3%E0%B8%9A%E0%B8%B8%E0%B8%A3%E0%B8%B5_-_panoramio.jpg/960px-%E0%B9%84%E0%B8%AD%E0%B8%A8%E0%B8%A3%E0%B8%B5%E0%B8%A1%E0%B8%81%E0%B8%B2%E0%B9%81%E0%B8%9F_%E0%B9%82%E0%B8%AD%E0%B8%A7%E0%B8%97%E0%B8%B6%E0%B9%89%E0%B8%87%E0%B8%99%E0%B8%B2%E0%B8%A2%E0%B8%81%E0%B8%B5%E0%B9%8B_%E0%B9%80%E0%B8%9E%E0%B8%8A%E0%B8%A3%E0%B8%9A%E0%B8%B8%E0%B8%A3%E0%B8%B5_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20200929113946475689'),
+    ('ร้านชมจันทร์ซีฟู้ด เกาะยอ',
+     'สงขลา',
+     'อาหารทะเล',
+     'เกาะยอ จังหวัดสงขลา',
+     'ร้านอาหารทะเลชมจันทร์ซีฟู้ดที่เกาะยอ ภาพแสดงบรรยากาศริมน้ำจากพื้นที่หลังคามุงจากของร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=55992534)
+ภาพ: ร้านชมจันทร์ซีฟู้ด เกาะยอ - panoramio.jpg — กิตติ เลขะกุล / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=55992534 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%8A%E0%B8%A1%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B9%8C%E0%B8%8B%E0%B8%B5%E0%B8%9F%E0%B8%B9%E0%B9%89%E0%B8%94_%E0%B9%80%E0%B8%81%E0%B8%B2%E0%B8%B0%E0%B8%A2%E0%B8%AD_-_panoramio.jpg/960px-%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%8A%E0%B8%A1%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B9%8C%E0%B8%8B%E0%B8%B5%E0%B8%9F%E0%B8%B9%E0%B9%89%E0%B8%94_%E0%B9%80%E0%B8%81%E0%B8%B2%E0%B8%B0%E0%B8%A2%E0%B8%AD_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=55992534'),
+    ('ก๋วยเตี๋ยวนายฮวด บางปลาม้า',
+     'สุพรรณบุรี',
+     'อาหารไทย',
+     'อำเภอบางปลาม้า จังหวัดสุพรรณบุรี',
+     'ร้านก๋วยเตี๋ยวนายฮวดในอำเภอบางปลาม้า ภาพแสดงหน้าร้านพร้อมป้ายชื่อภาษาไทยขนาดใหญ่
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=54877907)
+ภาพ: ร้าน ก๋วยเตี๋ยวนายฮวด บางปลาม้า สุพรรณบุรี - panoramio.jpg — samunchon khonsamun / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=54877907 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99_%E0%B8%81%E0%B9%8B%E0%B8%A7%E0%B8%A2%E0%B9%80%E0%B8%95%E0%B8%B5%E0%B9%8B%E0%B8%A2%E0%B8%A7%E0%B8%99%E0%B8%B2%E0%B8%A2%E0%B8%AE%E0%B8%A7%E0%B8%94_%E0%B8%9A%E0%B8%B2%E0%B8%87%E0%B8%9B%E0%B8%A5%E0%B8%B2%E0%B8%A1%E0%B9%89%E0%B8%B2_%E0%B8%AA%E0%B8%B8%E0%B8%9E%E0%B8%A3%E0%B8%A3%E0%B8%93%E0%B8%9A%E0%B8%B8%E0%B8%A3%E0%B8%B5_-_panoramio.jpg/960px-%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99_%E0%B8%81%E0%B9%8B%E0%B8%A7%E0%B8%A2%E0%B9%80%E0%B8%95%E0%B8%B5%E0%B9%8B%E0%B8%A2%E0%B8%A7%E0%B8%99%E0%B8%B2%E0%B8%A2%E0%B8%AE%E0%B8%A7%E0%B8%94_%E0%B8%9A%E0%B8%B2%E0%B8%87%E0%B8%9B%E0%B8%A5%E0%B8%B2%E0%B8%A1%E0%B9%89%E0%B8%B2_%E0%B8%AA%E0%B8%B8%E0%B8%9E%E0%B8%A3%E0%B8%A3%E0%B8%93%E0%B8%9A%E0%B8%B8%E0%B8%A3%E0%B8%B5_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=54877907'),
+    ('บ้านกล้วย&ไข่คาเฟ่',
+     'ลพบุรี',
+     'คาเฟ่',
+     'ตำบลหนองบัว อำเภอพัฒนานิคม จังหวัดลพบุรี 15140',
+     'คาเฟ่บ้านกล้วย&ไข่ในจังหวัดลพบุรี ภาพแสดงประติมากรรมพวงกล้วยขนาดใหญ่ในบริเวณสวนของคาเฟ่
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20260305094630001)
+ภาพ: Banana and Egg Cafe in Lopburi.jpg — VN.NguyenDucDuy / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=192376137 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://upload.wikimedia.org/wikipedia/commons/f/f1/Banana_and_Egg_Cafe_in_Lopburi.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20260305094630001'),
+    ('The Season by The Cliff Lipe',
+     'สตูล',
+     'อาหารทะเล',
+     'The Cliff Lipe Resort เกาะหลีเป๊ะ จังหวัดสตูล',
+     'ร้าน The Season ที่ The Cliff Lipe บนเกาะหลีเป๊ะ ภาพแสดงหอยเชลล์พร้อมเครื่องดื่มและวิวทะเลจากโต๊ะอาหารของร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=163404562)
+ภาพ: Koh Lipe, Adang-Rawi Archipelago, Thailand.jpg — Sharon Hahn Darlin / CC BY 2.0 (https://creativecommons.org/licenses/by/2.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=163404562 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Koh_Lipe%2C_Adang-Rawi_Archipelago%2C_Thailand.jpg/960px-Koh_Lipe%2C_Adang-Rawi_Archipelago%2C_Thailand.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=163404562'),
+    ('Bangkok Tree House Restaurant',
+     'สมุทรปราการ',
+     'อาหารไทย',
+     '60 หมู่ 1 ตำบลบางน้ำผึ้ง อำเภอพระประแดง จังหวัดสมุทรปราการ 10130',
+     'ร้านอาหารของ Bangkok Tree House ในบางน้ำผึ้ง ภาพแสดงทางเข้าพร้อมป้ายชื่อ Bangkok Tree House และป้าย Restaurant & Drink
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20190121141129415613)
+ภาพ: Bangkok Tree house - panoramio.jpg — mohigan / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=60552669 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Bangkok_Tree_house_-_panoramio.jpg/960px-Bangkok_Tree_house_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20190121141129415613'),
+    ('นิวทะเลเผา',
+     'ลำปาง',
+     'อาหารทะเล',
+     '257/1 ถนนทิพย์ช้าง ตำบลสวนดอก อำเภอเมืองลำปาง จังหวัดลำปาง 52100',
+     'ร้านอาหารทะเลบนถนนทิพย์ช้างในตัวเมืองลำปาง มีเมนูอาหารไทยและอาหารทะเล
+
+ที่มาข้อมูล: สำนักงานส่งเสริมการจัดประชุมและนิทรรศการ (TCEB) – Thai MICE Connect (https://www.thaimiceconnect.com/business/detail/16743)
+ภาพ: Seafood Restaurant at Night - Lampang - Thailand (34406505503).jpg — Adam Jones from Kelowna, BC, Canada / CC BY-SA 2.0 (https://creativecommons.org/licenses/by-sa/2.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=64174734 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Seafood_Restaurant_at_Night_-_Lampang_-_Thailand_%2834406505503%29.jpg/960px-Seafood_Restaurant_at_Night_-_Lampang_-_Thailand_%2834406505503%29.jpg',
+     'สำนักงานส่งเสริมการจัดประชุมและนิทรรศการ (TCEB) – Thai MICE Connect',
+     'https://www.thaimiceconnect.com/business/detail/16743'),
+    ('The Terracotta Garden at Lamphun (สวนไม้ไทยพ่อเลี้ยงหมื่น)',
+     'ลำพูน',
+     'คาเฟ่',
+     '95 หมู่ 3 ตำบลริมปิง อำเภอเมืองลำพูน จังหวัดลำพูน 51000',
+     'คาเฟ่และร้านอาหารในสวนไม้ไทยพ่อเลี้ยงหมื่น ตำบลริมปิง จัดแสดงงานดินเผาและสถาปัตยกรรมที่ได้แรงบันดาลใจจากศิลปะโบราณ
+
+ที่มาข้อมูล: กระทรวงการท่องเที่ยวและกีฬา – Thailand Tourism Directory (https://www.thailandtourismdirectory.go.th/en/attraction/5398)
+ภาพ: Terracotta Garden Lamphun in te restaurant garden IMG20251203123159.jpg — FredTC / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=179351453 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Terracotta_Garden_Lamphun_in_te_restaurant_garden_IMG20251203123159.jpg/960px-Terracotta_Garden_Lamphun_in_te_restaurant_garden_IMG20251203123159.jpg',
+     'กระทรวงการท่องเที่ยวและกีฬา – Thailand Tourism Directory',
+     'https://www.thailandtourismdirectory.go.th/en/attraction/5398'),
+    ('ใบเฟิร์น (Fern Restaurant)',
+     'แม่ฮ่องสอน',
+     'อาหารเหนือ',
+     '87 ถนนขุนลุมประพาส ตำบลจองคำ อำเภอเมืองแม่ฮ่องสอน จังหวัดแม่ฮ่องสอน 58000',
+     'ร้านอาหารบนถนนขุนลุมประพาสในตัวเมืองแม่ฮ่องสอน มีอาหารไทยและอาหารเหนือ
+
+ที่มาข้อมูล: กระทรวงการท่องเที่ยวและกีฬา – Thailand Tourism Directory (https://www.thailandtourismdirectory.go.th/th/restaurants/80673)
+ภาพ: ร้านใบเฟริน - panoramio.jpg — ::::=UT=:::: / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=52879923 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B9%83%E0%B8%9A%E0%B9%80%E0%B8%9F%E0%B8%A3%E0%B8%B4%E0%B8%99_-_panoramio.jpg/960px-%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B9%83%E0%B8%9A%E0%B9%80%E0%B8%9F%E0%B8%A3%E0%B8%B4%E0%B8%99_-_panoramio.jpg',
+     'กระทรวงการท่องเที่ยวและกีฬา – Thailand Tourism Directory',
+     'https://www.thailandtourismdirectory.go.th/th/restaurants/80673'),
+    ('ครัวออมเงิน',
+     'พะเยา',
+     'อาหารไทย',
+     'จังหวัดพะเยา',
+     'ร้านครัวออมเงินในจังหวัดพะเยา ภาพสถานที่แสดงป้ายชื่อร้านบริเวณทางเข้าและพื้นที่รับประทานอาหาร
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=54769056)
+ภาพ: ครัวออมเงิน - panoramio.jpg — Thanapat Sakulna / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=54769056 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B8%A7%E0%B8%AD%E0%B8%AD%E0%B8%A1%E0%B9%80%E0%B8%87%E0%B8%B4%E0%B8%99_-_panoramio.jpg/960px-%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B8%A7%E0%B8%AD%E0%B8%AD%E0%B8%A1%E0%B9%80%E0%B8%87%E0%B8%B4%E0%B8%99_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=54769056'),
+    ('Dairy Queen เซ็นทรัลนครสวรรค์',
+     'นครสวรรค์',
+     'คาเฟ่',
+     'ศูนย์การค้าเซ็นทรัลนครสวรรค์ 699 หมู่ 10 ถนนพหลโยธิน ตำบลปากน้ำโพ อำเภอเมืองนครสวรรค์ จังหวัดนครสวรรค์ 60000',
+     'ร้านไอศกรีมและของหวาน Dairy Queen ภายในศูนย์การค้าเซ็นทรัลนครสวรรค์
+
+ที่มาข้อมูล: Central Pattana (mall address) / Wikimedia Commons (branch identity) (https://www.centralpattana.co.th/en/contact-us/branch-contact)
+ภาพ: Dairy Queen restaurant at Central Nakhon Sawan.jpg — Reversemos.sapanaht / CC0 (https://creativecommons.org/publicdomain/zero/1.0/)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=146526648 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/44/Dairy_Queen_restaurant_at_Central_Nakhon_Sawan.jpg/960px-Dairy_Queen_restaurant_at_Central_Nakhon_Sawan.jpg',
+     'Central Pattana (mall address) / Wikimedia Commons (branch identity)',
+     'https://www.centralpattana.co.th/en/contact-us/branch-contact'),
+    ('ภัตตาคารท่าอากาศยานขอนแก่น',
+     'ขอนแก่น',
+     'อาหารไทย',
+     'ชั้น 3 ท่าอากาศยานขอนแก่น อำเภอเมืองขอนแก่น จังหวัดขอนแก่น',
+     'ภัตตาคารภายในท่าอากาศยานขอนแก่น ตามภาพและคำอธิบายสถานที่เมื่อปี 2561
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=89965707)
+ภาพ: Khon Kaen Restaurant.jpg — Bebiezaza / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=89965707 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Khon_Kaen_Restaurant.jpg/960px-Khon_Kaen_Restaurant.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=89965707'),
+    ('Rustic Barista',
+     'นครราชสีมา',
+     'คาเฟ่',
+     '519 อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000',
+     'ร้านกาแฟ Rustic Barista ในอำเภอเมืองนครราชสีมา
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20220420084920738508)
+ภาพ: 2019 02 Rustic Barista Specialty Coffee Korat 01.jpg — Takeaway / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=76793999 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/2019_02_Rustic_Barista_Specialty_Coffee_Korat_01.jpg/960px-2019_02_Rustic_Barista_Specialty_Coffee_Korat_01.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20220420084920738508'),
+    ('KLIM Restaurant',
+     'บุรีรัมย์',
+     'อาหารไทย',
+     'อำเภอเมืองบุรีรัมย์ จังหวัดบุรีรัมย์',
+     'ร้านอาหาร KLIM ในจังหวัดบุรีรัมย์ ตามภาพสถานที่เมื่อปี 2555
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=25300345)
+ภาพ: KLIM Restaurant.jpg — Mr.BuriramCN / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=25300345 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/KLIM_Restaurant.jpg/960px-KLIM_Restaurant.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=25300345'),
+    ('goodmook',
+     'มุกดาหาร',
+     'คาเฟ่',
+     '10 ตำบลมุกดาหาร อำเภอเมืองมุกดาหาร จังหวัดมุกดาหาร',
+     'คาเฟ่ goodmook ในอำเภอเมืองมุกดาหาร มีเครื่องดื่ม ของหวาน และอาหาร
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20241211142302001)
+ภาพ: Good^Mook - panoramio.jpg — Adriaan Castermans / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=53890064 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Good%5EMook_-_panoramio.jpg/960px-Good%5EMook_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20241211142302001'),
+    ('Café Amazon สาขา ปตท.ผานกเค้า',
+     'เลย',
+     'คาเฟ่',
+     'ตำบลผานกเค้า อำเภอภูกระดึง จังหวัดเลย',
+     'คาเฟ่ Amazon ในสถานีบริการ ปตท. ผานกเค้า อำเภอภูกระดึง ภาพแสดงระเบียงและสวนของร้านพร้อมฉากหลังผานกเค้า
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=60216299)
+ภาพ: ผานกเค้า จากCafe Amazon ใน PTT station - panoramio.jpg — ::::=UT=:::: / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=60216299 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/%E0%B8%9C%E0%B8%B2%E0%B8%99%E0%B8%81%E0%B9%80%E0%B8%84%E0%B9%89%E0%B8%B2_%E0%B8%88%E0%B8%B2%E0%B8%81Cafe_Amazon_%E0%B9%83%E0%B8%99_PTT_station_-_panoramio.jpg/960px-%E0%B8%9C%E0%B8%B2%E0%B8%99%E0%B8%81%E0%B9%80%E0%B8%84%E0%B9%89%E0%B8%B2_%E0%B8%88%E0%B8%B2%E0%B8%81Cafe_Amazon_%E0%B9%83%E0%B8%99_PTT_station_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=60216299'),
+    ('Café Amazon สำโรง อุทุมพรพิสัย',
+     'ศรีสะเกษ',
+     'คาเฟ่',
+     'ตำบลสำโรง อำเภออุทุมพรพิสัย จังหวัดศรีสะเกษ 33120',
+     'ร้านกาแฟ Café Amazon ในตำบลสำโรง อำเภออุทุมพรพิสัย จังหวัดศรีสะเกษ ตามภาพสถานที่เมื่อปี 2557
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=58748445)
+ภาพ: Samrong, Uthumphon Phisai District, Si Sa Ket 33120, Thailand - panoramio (4).jpg — กิตติ เลขะกุล / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=58748445 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Samrong%2C_Uthumphon_Phisai_District%2C_Si_Sa_Ket_33120%2C_Thailand_-_panoramio_%284%29.jpg/960px-Samrong%2C_Uthumphon_Phisai_District%2C_Si_Sa_Ket_33120%2C_Thailand_-_panoramio_%284%29.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=58748445'),
+    ('กาแฟกับต้นไม้',
+     'นครนายก',
+     'คาเฟ่',
+     '2 หมู่ 3 อำเภอองครักษ์ จังหวัดนครนายก 26120',
+     'ร้านกาแฟกับต้นไม้ในอำเภอองครักษ์ จังหวัดนครนายก มีที่นั่งในบ้านไม้และสวนริมคลอง
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201605181504036944)
+ภาพ: มุมกาแฟ Coffee Corner - panoramio.jpg — Thaweesak Churasri / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=53409286 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/%E0%B8%A1%E0%B8%B8%E0%B8%A1%E0%B8%81%E0%B8%B2%E0%B9%81%E0%B8%9F_Coffee_Corner_-_panoramio.jpg/960px-%E0%B8%A1%E0%B8%B8%E0%B8%A1%E0%B8%81%E0%B8%B2%E0%B9%81%E0%B8%9F_Coffee_Corner_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201605181504036944'),
+    ('Tiao Tao Tan',
+     'นนทบุรี',
+     'อาหารไทย',
+     'ถนนประชาชื่น ตำบลบ้านใหม่ อำเภอปากเกร็ด จังหวัดนนทบุรี',
+     'ร้านอาหารฮาลาลริมคลองบนถนนประชาชื่น ตำบลบ้านใหม่ อำเภอปากเกร็ด จังหวัดนนทบุรี
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=155292615)
+ภาพ: Tiao Tao Tan.jpg — Phoebus 28 / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=155292615 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://upload.wikimedia.org/wikipedia/commons/a/a0/Tiao_Tao_Tan.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=155292615')
+)
+INSERT INTO restaurants(name,province_id,category_id,address,description,latitude,longitude,image_url,source_name,source_url)
+SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.longitude::double precision,s.image_url,s.source_name,s.source_url
+FROM additional_places_23 s
 JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;

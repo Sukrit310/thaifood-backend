@@ -155,7 +155,7 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatal("missing categories")
 	}
 	list := a.request("GET", "/api/restaurants", "", nil, 200)
-	if list["page"] != float64(1) || list["limit"] != float64(12) || list["total"] != float64(30) {
+	if list["page"] != float64(1) || list["limit"] != float64(12) || list["total"] != float64(53) {
 		t.Fatalf("pagination/seed mismatch: %#v", list)
 	}
 	for _, row := range list["items"].([]any) {
@@ -163,6 +163,28 @@ func TestAPIEndToEnd(t *testing.T) {
 		if r["rating"] != nil || r["reviewCount"] != float64(0) {
 			t.Fatal("unreviewed seed restaurant has a rating")
 		}
+	}
+	// The seed now exceeds the API's maximum page size: every row must remain reachable.
+	seen := make(map[float64]bool)
+	covered := make(map[string]bool)
+	for page, want := range []int{50, 3} {
+		result := a.request("GET", fmt.Sprintf("/api/restaurants?limit=50&page=%d", page+1), "", nil, 200)
+		rows := result["items"].([]any)
+		if result["total"] != float64(53) || len(rows) != want {
+			t.Fatalf("seed page %d has %d rows, want %d", page+1, len(rows), want)
+		}
+		for _, row := range rows {
+			r := row.(map[string]any)
+			id := r["id"].(float64)
+			if seen[id] {
+				t.Fatalf("restaurant %v appears on multiple pages", id)
+			}
+			seen[id] = true
+			covered[r["province"].(string)] = true
+		}
+	}
+	if len(seen) != 53 || len(covered) != 42 {
+		t.Fatalf("seed pagination covers %d restaurants in %d provinces", len(seen), len(covered))
 	}
 	empty := a.request("GET", "/api/restaurants?q=__no_such_restaurant__", "", nil, 200)
 	if len(empty["items"].([]any)) != 0 || empty["total"] != float64(0) {

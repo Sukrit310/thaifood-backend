@@ -24,7 +24,7 @@ internal/config/    environment validation
 integration/        HTTP → Go → PostgreSQL ทดสอบทุก endpoint
 main.go             server, pgxpool, graceful shutdown, DB/admin commands
 schema.sql          ตาราง, FK, CHECK, indexes, RLS (รันซ้ำได้)
-seed.sql            77 จังหวัด, 7 ประเภท, 30 ร้านจริงพร้อมรูปและเครดิต (รันซ้ำได้)
+seed.sql            77 จังหวัด, 7 ประเภท, 53 ร้านจริงพร้อมรูปและเครดิต (รันซ้ำได้)
 postman/            collection และ environment ตัวอย่าง
 render.yaml         Render Blueprint
 Dockerfile          build แบบหลาย stage ใช้ non-root runtime
@@ -54,9 +54,9 @@ go run . serve
 
 Go เป็นผู้เข้าถึงฐานข้อมูลเพียงจุดเดียว ตารางเปิด RLS และไม่ให้ `anon`/`authenticated` อ่านหรือเขียนผ่าน Supabase Data API; `DATABASE_URL` จึงต้องเป็น database owner ที่เชื่อถือได้ Schema/seed ต้องใช้กับฐานข้อมูลของ ThaiFood เท่านั้น
 
-ชุดร้านเริ่มต้นเป็น **ร้านจริง 30 ร้านใน 19 จังหวัด พร้อมรูปที่ตรงกับร้านและเครดิตภาพ** ใช้ข้อมูล ททท. จาก data.go.th 23 ร้าน หน่วยงานรัฐอื่น 3 ร้าน ข้อมูลสถานที่ใน Wikimedia Commons 3 ร้าน และผู้ประกอบการโดยตรง 1 ร้าน ภาพแต่ละรูปมาจาก Wikimedia Commons พร้อมสัญญาอนุญาตของรูปนั้น ที่มาและเครดิตอยู่ใน `description` และมี `source_name`/`source_url` ในฐานข้อมูล ดู [แหล่งข้อมูลและใบอนุญาตภาพ](docs/RESTAURANT_DATA_SOURCES.md) ข้อมูลเป็น snapshot ไม่รับรองสถานะเปิดทำการล่าสุด และไม่สร้างที่อยู่/พิกัดที่แหล่งข้อมูลไม่มี คะแนนยังคำนวณจากรีวิวของสมาชิกในเว็บเท่านั้น
+ชุดร้านเริ่มต้นเป็น **ร้านจริง 53 ร้านใน 42 จังหวัด พร้อมรูปที่ตรงกับร้านและเครดิตภาพ** ใช้ข้อมูล ททท. จาก data.go.th รวมถึงหน่วยงานรัฐ ผู้ประกอบการ และข้อมูลสถานที่ใน Wikimedia Commons ภาพแต่ละรูปมาจาก Wikimedia Commons พร้อมสัญญาอนุญาตของรูปนั้น ที่มาและเครดิตอยู่ใน `description` และมี `source_name`/`source_url` ในฐานข้อมูล ดู [แหล่งข้อมูลและใบอนุญาตภาพ](docs/RESTAURANT_DATA_SOURCES.md) ข้อมูลเป็น snapshot ไม่รับรองสถานะเปิดทำการล่าสุด และไม่สร้างที่อยู่/พิกัดที่แหล่งข้อมูลไม่มี คะแนนยังคำนวณจากรีวิวของสมาชิกในเว็บเท่านั้น
 
-นำเข้าฐานข้อมูลที่ Render API ใช้แล้วเมื่อ 2026-11-12 ดู [ผลนำเข้า 20 ร้านแรก](docs/REAL_DATA_IMPORT_RESULTS.md) และ [ผลเพิ่ม 10 ร้านในจังหวัดใหม่](docs/TEN_NEW_PROVINCES_IMPORT_RESULTS.md)
+นำเข้าฐานข้อมูลที่ Render API ใช้ครั้งล่าสุดเมื่อ 2026-11-13 ดู [ผลนำเข้า 20 ร้านแรก](docs/REAL_DATA_IMPORT_RESULTS.md) [ผลเพิ่ม 10 ร้าน](docs/TEN_NEW_PROVINCES_IMPORT_RESULTS.md) และ [ผลเพิ่มอีก 23 ร้านในจังหวัดใหม่](docs/TWENTY_THREE_NEW_PROVINCES_IMPORT_RESULTS.md)
 
 การรัน `go run . seed` จาก revision นี้จะนำเข้าร้านจริงและลบเฉพาะร้านสมมติชุดเดิมที่ไม่เคยถูกแก้ไขและไม่มีรีวิวหรือรายการโปรดอ้างถึง ร้านที่สมาชิกใช้งานแล้วและร้านที่ผู้ดูแลเพิ่มหรือแก้ไขเองยังคงอยู่ รันซ้ำไม่เพิ่มร้านซ้ำและไม่ทับข้อมูลที่ Admin แก้ภายหลัง ใช้ source/build ของ revision นี้ เพราะ binary เก่าฝัง seed สมมติไว้ ก่อนใช้กับฐานข้อมูลจริงให้สำรองข้อมูลและตรวจ `DATABASE_URL` ว่าเป็นโปรเจกต์ ThaiFood
 

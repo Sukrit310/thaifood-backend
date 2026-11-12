@@ -65,11 +65,11 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	if len(p) != 77 {
 		t.Fatalf("got %d provinces, want 77", len(p))
 	}
-	items, total, err := s.ListRestaurants(ctx, RestaurantFilter{Page: 1, Limit: 50})
+	items, total, err := s.ListRestaurants(ctx, RestaurantFilter{Page: 1, Limit: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 30 || len(items) != 30 {
+	if total != 53 || len(items) != 53 {
 		t.Fatalf("seed duplicate/missing restaurants: %d/%d", total, len(items))
 	}
 	covered := make(map[string]bool)
@@ -79,8 +79,8 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 			t.Fatalf("unreviewed restaurant has rating: %+v", r)
 		}
 	}
-	if len(covered) != 19 {
-		t.Fatalf("seed covers %d provinces, want 19 after adding ten previously empty provinces", len(covered))
+	if len(covered) != 42 {
+		t.Fatalf("seed covers %d provinces, want 42 after adding 23 previously empty provinces", len(covered))
 	}
 	var unsecured int
 	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace=current_schema()::regnamespace AND relkind='r' AND NOT relrowsecurity`).Scan(&unsecured); err != nil {
@@ -94,7 +94,7 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 func TestSeedProvidesRealRestaurantsWithAttributedPhotos(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
-	items, _, err := s.ListRestaurants(ctx, RestaurantFilter{Page: 1, Limit: 50})
+	items, _, err := s.ListRestaurants(ctx, RestaurantFilter{Page: 1, Limit: 100})
 	if err != nil {
 		t.Fatal(err)
 	}

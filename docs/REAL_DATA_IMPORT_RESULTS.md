@@ -1,5 +1,7 @@
 # Live real-restaurant import — 12 November 2026
 
+Latest additive data run: [23 more provinces and current 53-restaurant verification](TWENTY_THREE_NEW_PROVINCES_IMPORT_RESULTS.md). Earlier results below remain historical.
+
 Later additive data run: [ten new provinces and current 30-restaurant verification](TEN_NEW_PROVINCES_IMPORT_RESULTS.md). The results below describe the earlier run.
 
 The existing Render API now serves **20 real restaurants in 9 provinces**, each with a different, matched photograph and visible attribution. These are 19 factual records from the TAT open dataset and one from Breezeo's official operator. See [the full source and image-license register](RESTAURANT_DATA_SOURCES.md).
