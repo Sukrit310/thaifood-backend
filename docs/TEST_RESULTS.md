@@ -1,5 +1,7 @@
 # ผลการตรวจ ThaiFood Guide Backend
 
+Later additive run: [six restaurants within the existing 42 provinces, total 59](SIX_EXISTING_PROVINCES_IMPORT_RESULTS.md). Earlier results below remain historical.
+
 Latest additive data run: [23 more provinces and current 53-restaurant verification](TWENTY_THREE_NEW_PROVINCES_IMPORT_RESULTS.md). Earlier results below remain historical.
 
 Later additive data run: [ten new provinces and current 30-restaurant verification](TEN_NEW_PROVINCES_IMPORT_RESULTS.md). The results below describe the earlier run.

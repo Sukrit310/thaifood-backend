@@ -1,5 +1,7 @@
 # Twenty-three additional provinces: import results
 
+Later additive run: [six restaurants within the existing 42 provinces, total 59](SIX_EXISTING_PROVINCES_IMPORT_RESULTS.md). Earlier results below remain historical.
+
 Live public API verification: **2026-11-13 00:38:35 +07 (Asia/Bangkok)**.
 
 The existing ThaiFood API now serves **53 real businesses across 42 provinces**. Twenty-three additions provide one business in each of 23 previously empty provinces, with a different matching licensed photograph and visible attribution. The original thirty restaurant rows are unchanged. [Source facts and image licenses](RESTAURANT_DATA_SOURCES.md) document each record.

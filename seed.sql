@@ -1,4 +1,4 @@
--- Idempotent reference data and 53 real restaurants.
+-- Idempotent reference data and 59 real restaurants.
 -- Sources and individual photo licenses: docs/RESTAURANT_DATA_SOURCES.md
 -- Retrieved 2026-11-12. Ratings are calculated only from this site's reviews.
 BEGIN;
@@ -870,6 +870,101 @@ WITH additional_places_23(name,province_name,category_name,address,description,l
 INSERT INTO restaurants(name,province_id,category_id,address,description,latitude,longitude,image_url,source_name,source_url)
 SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.longitude::double precision,s.image_url,s.source_name,s.source_url
 FROM additional_places_23 s
+JOIN provinces p ON p.name_th=s.province_name
+JOIN categories c ON c.name_th=s.category_name
+ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
+
+-- Six additional real places in existing provinces (2026-11-13).
+-- INSERT-only: existing restaurants, reviews and favorites are preserved.
+WITH additional_existing_places(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
+    ('Anchan Vegetarian Restaurant',
+     'เชียงใหม่',
+     'อาหารมังสวิรัติ',
+     'ย่านนิมมานเหมินท์ อำเภอเมืองเชียงใหม่ จังหวัดเชียงใหม่',
+     'ร้านอาหารมังสวิรัติในเชียงใหม่ มีเมนูอาหารไทยจากผักและเต้าหู้ ภาพแสดงยำหัวปลีทอดของร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=30500981)
+ภาพ: Yam huapli thot 02.jpg — Takeaway / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=30500981 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Yam_huapli_thot_02.jpg/960px-Yam_huapli_thot_02.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=30500981'),
+    ('WhatCat Cafe',
+     'เชียงราย',
+     'คาเฟ่',
+     'ถนนธนาลัย อำเภอเมืองเชียงราย จังหวัดเชียงราย',
+     'คาเฟ่แมวบนถนนธนาลัยในเมืองเชียงราย ภาพแสดงหน้าร้านพร้อมป้าย WhatCat Cafe
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=108582862)
+ภาพ: WhatCat Cafe, Tanalai Rd., Chiang Rai, Thailand.jpg — Tree Lightbulb / CC0 (https://creativecommons.org/publicdomain/zero/1.0/)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=108582862 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/WhatCat_Cafe%2C_Tanalai_Rd.%2C_Chiang_Rai%2C_Thailand.jpg/960px-WhatCat_Cafe%2C_Tanalai_Rd.%2C_Chiang_Rai%2C_Thailand.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=108582862'),
+    ('Awesome Coffee Shop',
+     'นครราชสีมา',
+     'คาเฟ่',
+     'อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา',
+     'ร้านกาแฟ Awesome Coffee ในตัวเมืองนครราชสีมา ภาพแสดงพื้นที่นั่งและเคาน์เตอร์ภายในร้าน
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=76794825)
+ภาพ: 2019 02 Awesome Coffee Shop in Korat.jpg — Takeaway / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=76794825 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/2019_02_Awesome_Coffee_Shop_in_Korat.jpg/960px-2019_02_Awesome_Coffee_Shop_in_Korat.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=76794825'),
+    ('ร้านเจ๊ไฝ',
+     'กรุงเทพมหานคร',
+     'อาหารไทย',
+     'แขวงสำราญราษฎร์ เขตพระนคร กรุงเทพมหานคร',
+     'ร้านอาหารไทยริมทางในย่านสำราญราษฎร์ เป็นที่รู้จักจากไข่เจียวปูและผัดขี้เมา
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=136836882)
+ภาพ: Bangkok street food - Jay Fai.jpg — Streets of Food / CC BY 2.0 (https://creativecommons.org/licenses/by/2.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=136836882 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Bangkok_street_food_-_Jay_Fai.jpg/960px-Bangkok_street_food_-_Jay_Fai.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=136836882'),
+    ('Pan and David Restaurant',
+     'ชลบุรี',
+     'อาหารไทย',
+     'เกาะสีชัง จังหวัดชลบุรี',
+     'ร้านอาหารบนเกาะสีชัง มีอาหารไทยและอาหารทะเลให้เลือก
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=54314571)
+ภาพ: Pan and David Restaurant - panoramio.jpg — ekeidar / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=54314571 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Pan_and_David_Restaurant_-_panoramio.jpg/960px-Pan_and_David_Restaurant_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=54314571'),
+    ('โกปี้เตี่ยม (Kopitiam by Wilai)',
+     'ภูเก็ต',
+     'อาหารไทย',
+     '18 ถนนถลาง ตำบลตลาดใหญ่ อำเภอเมืองภูเก็ต จังหวัดภูเก็ต 83000',
+     'ร้านอาหารบนถนนถลางในเมืองเก่าภูเก็ต เสิร์ฟอาหารบาบ๋า-ย่าหยา อาหารไทย กาแฟและชา
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=2011120109182256)
+ภาพ: Kopitiam by Wilai, Phuket (13271249955).jpg — Thanakrit Gu from Shanghai, China / CC BY 2.0 (https://creativecommons.org/licenses/by/2.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=97443627 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Kopitiam_by_Wilai%2C_Phuket_%2813271249955%29.jpg/960px-Kopitiam_by_Wilai%2C_Phuket_%2813271249955%29.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=2011120109182256')
+)
+INSERT INTO restaurants(name,province_id,category_id,address,description,latitude,longitude,image_url,source_name,source_url)
+SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.longitude::double precision,s.image_url,s.source_name,s.source_url
+FROM additional_existing_places s
 JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
