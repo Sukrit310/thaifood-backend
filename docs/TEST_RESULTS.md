@@ -1,5 +1,7 @@
 # ผลการตรวจ ThaiFood Guide Backend
 
+Later additive data run: [ten new provinces and current 30-restaurant verification](TEN_NEW_PROVINCES_IMPORT_RESULTS.md). The results below describe the earlier run.
+
 รายงานด้านล่างเป็นผลตรวจชุดเดิมก่อนเปลี่ยนข้อมูลสาธิตเป็นร้านจริง ผลการนำเข้าร้านจริงและทดสอบล่าสุดวันที่ 2026-11-12 อยู่ใน [REAL_DATA_IMPORT_RESULTS.md](REAL_DATA_IMPORT_RESULTS.md)
 
 ตรวจระบบ local วันที่ 2026-11-11 และ Supabase/Render วันที่ 2026-11-12 (Asia/Bangkok). ตรวจใน repository `Sukrit310/thaifood-backend` บน branch `feat/thaifood-guide-backend` โดยไม่มีการแก้ repository MovieHub ต้นแบบ

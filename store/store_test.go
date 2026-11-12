@@ -69,13 +69,18 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 20 || len(items) != 20 {
+	if total != 30 || len(items) != 30 {
 		t.Fatalf("seed duplicate/missing restaurants: %d/%d", total, len(items))
 	}
+	covered := make(map[string]bool)
 	for _, r := range items {
+		covered[r.Province] = true
 		if r.Rating != nil || r.ReviewCount != 0 {
 			t.Fatalf("unreviewed restaurant has rating: %+v", r)
 		}
+	}
+	if len(covered) != 19 {
+		t.Fatalf("seed covers %d provinces, want 19 after adding ten previously empty provinces", len(covered))
 	}
 	var unsecured int
 	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relnamespace=current_schema()::regnamespace AND relkind='r' AND NOT relrowsecurity`).Scan(&unsecured); err != nil {

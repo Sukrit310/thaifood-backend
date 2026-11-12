@@ -1,4 +1,4 @@
--- Idempotent reference data and 20 real restaurants.
+-- Idempotent reference data and 30 real restaurants.
 -- Sources and individual photo licenses: docs/RESTAURANT_DATA_SOURCES.md
 -- Retrieved 2026-11-12. Ratings are calculated only from this site's reviews.
 BEGIN;
@@ -388,6 +388,157 @@ FROM real_places s
 JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 -- Stable source IDs prevent duplicates and preserve later administrator edits.
+ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
+
+-- Additional real places: ten previously empty provinces (2026-11-12).
+-- INSERT-only: existing restaurants, reviews and favorites are preserved.
+WITH additional_places(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
+    ('รำพึง',
+     'สิงห์บุรี',
+     'อาหารไทย',
+     'ตำบลบางมัญ อำเภอเมืองสิงห์บุรี จังหวัดสิงห์บุรี 16000',
+     'ร้านอาหารไทยในอำเภอเมืองสิงห์บุรี จังหวัดสิงห์บุรี
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201112191540281739)
+ภาพ: "รำพึง" ร้านอาหารอร่อยเมืองสิงห์ - panoramio.jpg — ::::=UT=:::: / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=52789509 (แสดงเป็นภาพย่อ)',
+     14.8986018,
+     100.4125322,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/%22%E0%B8%A3%E0%B8%B3%E0%B8%9E%E0%B8%B6%E0%B8%87%22_%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3%E0%B8%AD%E0%B8%A3%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%B4%E0%B8%87%E0%B8%AB%E0%B9%8C_-_panoramio.jpg/960px-%22%E0%B8%A3%E0%B8%B3%E0%B8%9E%E0%B8%B6%E0%B8%87%22_%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3%E0%B8%AD%E0%B8%A3%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%B4%E0%B8%87%E0%B8%AB%E0%B9%8C_-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201112191540281739'),
+    ('ร้านอาหารถ้ำกระแซ',
+     'กาญจนบุรี',
+     'อาหารไทย',
+     'ตำบลลุ่มสุ่ม อำเภอไทรโยค จังหวัดกาญจนบุรี',
+     'ร้านอาหารบริเวณถ้ำกระแซ ตำบลลุ่มสุ่ม อำเภอไทรโยค จังหวัดกาญจนบุรี
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=55403163)
+ภาพ: ร้านอาหารถ้ำกระแซ Tham Krasae Restaurant - panoramio.jpg — khanawoot / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=55403163 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3%E0%B8%96%E0%B9%89%E0%B8%B3%E0%B8%81%E0%B8%A3%E0%B8%B0%E0%B9%81%E0%B8%8B_Tham_Krasae_Restaurant_-_panoramio.jpg/960px-%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3%E0%B8%96%E0%B9%89%E0%B8%B3%E0%B8%81%E0%B8%A3%E0%B8%B0%E0%B9%81%E0%B8%8B_Tham_Krasae_Restaurant_-_panoramio.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=55403163'),
+    ('แม่เฉลียว',
+     'ชุมพร',
+     'อาหารใต้',
+     '35 2 ตำบลขันเงิน อำเภอหลังสวน จังหวัดชุมพร 86110',
+     'ร้านอาหารไทยและอาหารพื้นเมืองภาคใต้ในอำเภอหลังสวน จังหวัดชุมพร
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20200910155310471766)
+ภาพ: MaeChaleaw restaurant.jpg — Supisara.plus / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=68640850 (แสดงเป็นภาพย่อ)',
+     9.9539054,
+     99.07549960000001,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/MaeChaleaw_restaurant.jpg/960px-MaeChaleaw_restaurant.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20200910155310471766'),
+    ('ร้านอาหารปันหยี',
+     'พังงา',
+     'อาหารทะเล',
+     '78/7 ม.2 อำเภอเมืองพังงา จังหวัดพังงา 82000',
+     'ร้านอาหารทะเลที่เกาะปันหยี อำเภอเมืองพังงา จังหวัดพังงา
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20111207113520609)
+ภาพ: Paynee Restaurante at the floating muslim village. - panoramio.jpg — Jaakko H. / CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=52215779 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Paynee_Restaurante_at_the_floating_muslim_village._-_panoramio.jpg/960px-Paynee_Restaurante_at_the_floating_muslim_village._-_panoramio.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20111207113520609'),
+    ('The Mountain Grand View',
+     'สุราษฎร์ธานี',
+     'อาหารไทย',
+     'อำเภอเกาะสมุย จังหวัดสุราษฎร์ธานี 84140',
+     'ร้านอาหารไทยและเครื่องดื่มบนเกาะสมุย จังหวัดสุราษฎร์ธานี
+
+ที่มาข้อมูล: การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1) (https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20180219161649340650)
+ภาพ: The mountain grand view restaurant koh samui - panoramio (1).jpg — Dirk Enthoven / CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=56864156 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/The_mountain_grand_view_restaurant_koh_samui_-_panoramio_%281%29.jpg/960px-The_mountain_grand_view_restaurant_koh_samui_-_panoramio_%281%29.jpg',
+     'การท่องเที่ยวแห่งประเทศไทย (data.go.th restaurant1)',
+     'https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20180219161649340650'),
+    ('ขนมจีบสังขยาป้าพิณ',
+     'ตรัง',
+     'อาหารไทย',
+     '30/2 หมู่ 10 ถนนเพชรเกษม ตำบลลำภูรา อำเภอห้วยยอด จังหวัดตรัง',
+     'ร้านขนมจีบไส้สังขยาพื้นถิ่นตรังในตำบลลำภูรา อำเภอห้วยยอด
+
+ที่มาข้อมูล: กรมส่งเสริมอุตสาหกรรม (IPC10) (https://ipc10.dip.go.th/uploadcontent/IPC10/Purchase%20NEW/ipc10_2564.pdf)
+ภาพ: Lam Phura, Trang, Thailand.jpg — Sharon Hahn Darlin / CC BY 2.0 (https://creativecommons.org/licenses/by/2.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=163838186 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/Lam_Phura%2C_Trang%2C_Thailand.jpg/960px-Lam_Phura%2C_Trang%2C_Thailand.jpg',
+     'กรมส่งเสริมอุตสาหกรรม (IPC10)',
+     'https://ipc10.dip.go.th/uploadcontent/IPC10/Purchase%20NEW/ipc10_2564.pdf'),
+    ('ก๋วยเตี๋ยวปากหม้อ พนมสารคาม บางปะอิน',
+     'พระนครศรีอยุธยา',
+     'อาหารไทย',
+     'ทางหลวงเอเชียหมายเลข 1 ตำบลบ้านหว้า อำเภอบางปะอิน จังหวัดพระนครศรีอยุธยา 13160',
+     'ร้านก๋วยเตี๋ยวปากหม้อริมถนนสายเอเชียในอำเภอบางปะอิน จังหวัดพระนครศรีอยุธยา
+
+ที่มาข้อมูล: กระทรวงการท่องเที่ยวและกีฬา (Thailand Tourism Directory) (https://www.thailandtourismdirectory.go.th/restaurants/84040)
+ภาพ: Bang Pa-in - Kuai tiao pak mo - ก๋วยเตี๋ยวปากหม้อ พนมสารคาม บางปะอิน (2025) - img 01.jpg — Chainwit. / CC BY 4.0 (https://creativecommons.org/licenses/by/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=159755058 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Bang_Pa-in_-_Kuai_tiao_pak_mo_-_%E0%B8%81%E0%B9%8B%E0%B8%A7%E0%B8%A2%E0%B9%80%E0%B8%95%E0%B8%B5%E0%B9%8B%E0%B8%A2%E0%B8%A7%E0%B8%9B%E0%B8%B2%E0%B8%81%E0%B8%AB%E0%B8%A1%E0%B9%89%E0%B8%AD_%E0%B8%9E%E0%B8%99%E0%B8%A1%E0%B8%AA%E0%B8%B2%E0%B8%A3%E0%B8%84%E0%B8%B2%E0%B8%A1_%E0%B8%9A%E0%B8%B2%E0%B8%87%E0%B8%9B%E0%B8%B0%E0%B8%AD%E0%B8%B4%E0%B8%99_%282025%29_-_img_01.jpg/960px-Bang_Pa-in_-_Kuai_tiao_pak_mo_-_%E0%B8%81%E0%B9%8B%E0%B8%A7%E0%B8%A2%E0%B9%80%E0%B8%95%E0%B8%B5%E0%B9%8B%E0%B8%A2%E0%B8%A7%E0%B8%9B%E0%B8%B2%E0%B8%81%E0%B8%AB%E0%B8%A1%E0%B9%89%E0%B8%AD_%E0%B8%9E%E0%B8%99%E0%B8%A1%E0%B8%AA%E0%B8%B2%E0%B8%A3%E0%B8%84%E0%B8%B2%E0%B8%A1_%E0%B8%9A%E0%B8%B2%E0%B8%87%E0%B8%9B%E0%B8%B0%E0%B8%AD%E0%B8%B4%E0%B8%99_%282025%29_-_img_01.jpg',
+     'กระทรวงการท่องเที่ยวและกีฬา (Thailand Tourism Directory)',
+     'https://www.thailandtourismdirectory.go.th/restaurants/84040'),
+    ('ร้านกาแฟชายทุ่ง',
+     'ปทุมธานี',
+     'คาเฟ่',
+     'คลอง 4 ถนนรังสิต-นครนายก ตำบลบึงยี่โถ อำเภอธัญบุรี จังหวัดปทุมธานี',
+     'ร้านกาแฟและเบเกอรี่ริมแปลงนาสาธิตในตำบลบึงยี่โถ อำเภอธัญบุรี จังหวัดปทุมธานี
+
+ที่มาข้อมูล: สำนักงานประชาสัมพันธ์จังหวัดปทุมธานี (https://pathumthani.prd.go.th/th/content/category/detail/id/33/iid/339375)
+ภาพ: Chai Thung Coffee by Tris T7.jpg — Tris T7 / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=79808335 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Chai_Thung_Coffee_by_Tris_T7.jpg/960px-Chai_Thung_Coffee_by_Tris_T7.jpg',
+     'สำนักงานประชาสัมพันธ์จังหวัดปทุมธานี',
+     'https://pathumthani.prd.go.th/th/content/category/detail/id/33/iid/339375'),
+    ('Café Amazon พลายชุมพล',
+     'พิษณุโลก',
+     'คาเฟ่',
+     'ตำบลพลายชุมพล อำเภอเมืองพิษณุโลก จังหวัดพิษณุโลก',
+     'ร้านกาแฟ Café Amazon ในพื้นที่พลายชุมพล อำเภอเมืองพิษณุโลก
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=99645573)
+ภาพ: Cafe Amazon, Phlai Chumphon, Phitsanulok.jpg — SietsL / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=99645573 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Cafe_Amazon%2C_Phlai_Chumphon%2C_Phitsanulok.jpg/960px-Cafe_Amazon%2C_Phlai_Chumphon%2C_Phitsanulok.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=99645573'),
+    ('Café Amazon สตาร์พลาซ่า อรัญประเทศ',
+     'สระแก้ว',
+     'คาเฟ่',
+     'ศูนย์การค้าสตาร์พลาซ่า บ้านคลองลึก อำเภออรัญประเทศ จังหวัดสระแก้ว',
+     'ร้านกาแฟ Café Amazon ที่ศูนย์การค้าสตาร์พลาซ่า ย่านบ้านคลองลึก อำเภออรัญประเทศ
+
+ที่มาข้อมูล: Wikimedia Commons (place metadata) (https://commons.wikimedia.org/?curid=82178007)
+ภาพ: Café Amazon, Star Plaza, Aranyaprathet, 2018 (01).jpg — Bahnfrend / CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+ที่มาภาพ: https://commons.wikimedia.org/?curid=82178007 (แสดงเป็นภาพย่อ)',
+     NULL,
+     NULL,
+     'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Caf%C3%A9_Amazon%2C_Star_Plaza%2C_Aranyaprathet%2C_2018_%2801%29.jpg/960px-Caf%C3%A9_Amazon%2C_Star_Plaza%2C_Aranyaprathet%2C_2018_%2801%29.jpg',
+     'Wikimedia Commons (place metadata)',
+     'https://commons.wikimedia.org/?curid=82178007')
+)
+INSERT INTO restaurants(name,province_id,category_id,address,description,latitude,longitude,image_url,source_name,source_url)
+SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.longitude::double precision,s.image_url,s.source_name,s.source_url
+FROM additional_places s
+JOIN provinces p ON p.name_th=s.province_name
+JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
 
 COMMIT;

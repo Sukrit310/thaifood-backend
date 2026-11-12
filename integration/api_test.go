@@ -155,7 +155,7 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatal("missing categories")
 	}
 	list := a.request("GET", "/api/restaurants", "", nil, 200)
-	if list["page"] != float64(1) || list["limit"] != float64(12) || list["total"] != float64(20) {
+	if list["page"] != float64(1) || list["limit"] != float64(12) || list["total"] != float64(30) {
 		t.Fatalf("pagination/seed mismatch: %#v", list)
 	}
 	for _, row := range list["items"].([]any) {

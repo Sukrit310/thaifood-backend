@@ -1,21 +1,26 @@
 # Restaurant data and image sources
 
-The live import replaces the earlier fictional demonstration rows with **20 real restaurants in 9 provinces**, each with a different photograph matched to that restaurant, its food, view, or premises. The public Go API contract is unchanged. No external ratings/reviews are imported.
+The current seed contains **30 real restaurants in 19 provinces**, each with a different photograph matched to that restaurant, its food, view, or premises. The first import replaced 25 fictional demonstration rows with 20 real businesses; the next import adds ten businesses in ten previously empty provinces. The public Go API contract is unchanged. No external ratings/reviews are imported.
 
 Retrieved: **2026-11-12 (Asia/Bangkok)**.
 
 ## Restaurant facts
 
-- **19 records:** [TAT restaurant1 catalogue](https://data.go.th/th/dataset/restaurant1), published by the Tourism Authority of Thailand, via [the downloadable JSON resource](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json). The catalogue declares `Open Data Common` and unrestricted public access; it does not provide a more specific license URI. Only factual place fields are normalized here; original marketing descriptions are not copied.
+- **23 records:** [TAT restaurant1 catalogue](https://data.go.th/th/dataset/restaurant1), published by the Tourism Authority of Thailand, via [the downloadable JSON resource](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json). The catalogue declares `Open Data Common` and unrestricted public access; it does not provide a more specific license URI. Only factual place fields are normalized here; original marketing descriptions are not copied.
 - The downloaded snapshot contains **13,035 source records**, not 13,035 unique verified businesses. This seed is a curated subset with matched, licensed photographs; it does not bulk-import entries with no image or uncertain identity.
 - Full source file SHA-256: `c015a3dbac7852b1d6e133d239957a6cbf07bf3c309cc677239d47c685556760` (20,412,327 bytes). The 20 MB raw snapshot is not committed.
 - **1 record (Breezeo):** factual name/cuisine/location from its [operator's official page](https://www.royalcliff.com/restaurant/breezeo/); street address from the [Royal Cliff factsheet](https://www.royalcliff.com/wp-content/uploads/2026/01/OnlineRCHG-Factsheet-CN-2026-01.pdf). Its short Thai description is written for this project.
+
+Additional factual sources:
+
+- **3 government records:** the Department of Industrial Promotion / IPC10 [local products register](https://ipc10.dip.go.th/uploadcontent/IPC10/Purchase%20NEW/ipc10_2564.pdf) for ขนมจีบสังขยาป้าพิณ; the Ministry of Tourism and Sports [Thailand Tourism Directory entry 84040](https://www.thailandtourismdirectory.go.th/restaurants/84040) for ก๋วยเตี๋ยวปากหม้อ พนมสารคาม บางปะอิน; and the Pathum Thani Provincial Public Relations Office [Chai Thung article](https://pathumthani.prd.go.th/th/content/category/detail/id/33/iid/339375). Pa Pin's identity and location are also corroborated by [Suan Dusit University's culinary article](https://food.dusit.ac.th/home/?p=21039). These are short normalized facts, not copied promotional descriptions.
+- **3 Wikimedia Commons place records:** ร้านอาหารถ้ำกระแซ, Café Amazon พลายชุมพล and Café Amazon สตาร์พลาซ่า อรัญประเทศ. Their file descriptions, visible signs and locality categories identify the photographed business and location. These entries use the Commons file URL as their factual source identity; they are not represented as TAT records.
 
 TAT field mapping: `PLACE_NAME_TH` → name; `PROVINCE_NAME_TH` → province lookup; `PLACE_ADDRESS`, `PLACE_ALLEY`, subdistrict/district/province and postcode → address; `PLACE_LOCATION` → latitude/longitude when present. The seven app categories are curated from food-type labels and the named restaurant's documented cuisine. Empty address components and absent coordinates remain absent; camera GPS is not substituted for a restaurant's coordinates. The source dataset does not include image fields.
 
 `source_url` uses the original JSON resource URL plus `#PLACE_ID=...` as a stable per-record identity; the fragment identifies a row in that downloaded dataset, not an official restaurant detail page. Source IDs and the normalized records are represented directly in `seed.sql`. Do not change the source identity when refreshing an existing business.
 
-Current coverage: เชียงใหม่ 5, กรุงเทพมหานคร 6, ภูเก็ต 1, ชลบุรี 2, กระบี่ 2, นครปฐม 1, เชียงราย 1, สุโขทัย 1, ประจวบคีรีขันธ์ 1.
+Current coverage: เชียงใหม่ 5, กรุงเทพมหานคร 6, ภูเก็ต 1, ชลบุรี 2, กระบี่ 2, นครปฐม 1, เชียงราย 1, สุโขทัย 1, ประจวบคีรีขันธ์ 1, สิงห์บุรี 1, กาญจนบุรี 1, ชุมพร 1, พังงา 1, สุราษฎร์ธานี 1, ตรัง 1, พระนครศรีอยุธยา 1, ปทุมธานี 1, พิษณุโลก 1, สระแก้ว 1.
 
 These are source snapshots of real businesses, not a guarantee of current operating hours or opening status. Historical awards, stars, external ratings and external reviews are deliberately omitted. Some TAT rows lack street or coordinate details; those have not been invented.
 
@@ -48,13 +53,32 @@ The existing FE renders `description` on restaurant details. The seed includes a
 | คุ้มขันโตก | เชียงใหม่ | [201210161441344292](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201210161441344292) | [Photo](https://commons.wikimedia.org/?curid=44800193) / whyyan / [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) |
 | ประภาคาร ซีฟู้ด | ชลบุรี | [201211131052574711](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201211131052574711) | [Photo](https://commons.wikimedia.org/?curid=54350798) / Boonchai C / [CC BY 3.0](https://creativecommons.org/licenses/by/3.0) |
 
+## Ten additional provinces
+
+| Restaurant | Province | Data record | Photograph / author / license |
+| --- | --- | --- | --- |
+| รำพึง | สิงห์บุรี | [201112191540281739](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=201112191540281739) | [Photo](https://commons.wikimedia.org/?curid=52789509) / ::::=UT=:::: / [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| ร้านอาหารถ้ำกระแซ | กาญจนบุรี | [commons-tham-krasae-restaurant](https://commons.wikimedia.org/?curid=55403163) | [Photo](https://commons.wikimedia.org/?curid=55403163) / khanawoot / [CC BY 3.0](https://creativecommons.org/licenses/by/3.0) |
+| แม่เฉลียว | ชุมพร | [20200910155310471766](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20200910155310471766) | [Photo](https://commons.wikimedia.org/?curid=68640850) / Supisara.plus / [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| ร้านอาหารปันหยี | พังงา | [20111207113520609](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20111207113520609) | [Photo](https://commons.wikimedia.org/?curid=52215779) / Jaakko H. / [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| The Mountain Grand View | สุราษฎร์ธานี | [20180219161649340650](https://datacatalog.tat.or.th/dataset/6d8193a1-7187-4625-a22d-504ab69b427d/resource/53af01a0-9ef5-459a-88c1-befe4690b1f2/download/restaurant.json#PLACE_ID=20180219161649340650) | [Photo](https://commons.wikimedia.org/?curid=56864156) / Dirk Enthoven / [CC BY 3.0](https://creativecommons.org/licenses/by/3.0) |
+| ขนมจีบสังขยาป้าพิณ | ตรัง | [ipc10-pa-pin-lam-phura](https://ipc10.dip.go.th/uploadcontent/IPC10/Purchase%20NEW/ipc10_2564.pdf) | [Photo](https://commons.wikimedia.org/?curid=163838186) / Sharon Hahn Darlin / [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) |
+| ก๋วยเตี๋ยวปากหม้อ พนมสารคาม บางปะอิน | พระนครศรีอยุธยา | [ttd-84040](https://www.thailandtourismdirectory.go.th/restaurants/84040) | [Photo](https://commons.wikimedia.org/?curid=159755058) / Chainwit. / [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) |
+| ร้านกาแฟชายทุ่ง | ปทุมธานี | [prd-pathumthani-339375](https://pathumthani.prd.go.th/th/content/category/detail/id/33/iid/339375) | [Photo](https://commons.wikimedia.org/?curid=79808335) / Tris T7 / [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Café Amazon พลายชุมพล | พิษณุโลก | [commons-cafe-amazon-phlai-chumphon](https://commons.wikimedia.org/?curid=99645573) | [Photo](https://commons.wikimedia.org/?curid=99645573) / SietsL / [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Café Amazon สตาร์พลาซ่า อรัญประเทศ | สระแก้ว | [commons-cafe-amazon-star-plaza](https://commons.wikimedia.org/?curid=82178007) | [Photo](https://commons.wikimedia.org/?curid=82178007) / Bahnfrend / [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+
+The four additional TAT records use the same snapshot and mapping as the original nineteen. ร้านอาหารถ้ำกระแซ is identified from the photographed Thai/English sign and the Lum Sum locality category. It is **not** mapped to TAT's separate เจ.อาร์. ถ้ำกระแซ entry: that record has different contact/address details. Only the verified locality is stored for this restaurant, with no invented street address or venue coordinates. The two Café Amazon entries likewise use only their documented branch/locality; no branch code, phone number or camera GPS is invented. Pa Pin's specialty is Thai custard pastry (ขนมจีบไส้สังขยา); the English image caption is not used to describe it as steamed dumplings.
+
 ## Import and preservation
 
 Use the existing `go run . seed` command with the intended ThaiFood `DATABASE_URL` exported. The app does not load `.env` automatically. The SQL is embedded at build time, so use a build from this revision; the previously deployed binary embeds the old fictional seed. Running this command changes database content immediately; it does not require an API deployment.
 
 The SQL keeps 77 provinces and 7 categories, deduplicates restaurants by their stable source identity, and leaves later admin edits untouched on replay (`ON CONFLICT DO NOTHING`). It removes only rows with BOTH the exact old fictional `source_name` and fictional URN prefix, only when `updated_at = created_at` (never edited), and only when neither a review nor a favorite references them. Review/favorite writes are briefly locked during that reference check to prevent a concurrent cascade. All other restaurants and all members/reviews/favorites are preserved. A referenced or admin-edited fictional row is retained and needs an explicit later moderation decision; it must never be silently relabeled as a real business.
 
-Before the live run, save a permission-restricted backup of the original fictional restaurant rows and record aggregate member/review/favorite counts. Verify list/detail/filter output, all image URLs, replay idempotency and unchanged user data afterward. Do not commit database credentials, backups with user data, or private environment files.
+For the first replacement import, save a permission-restricted backup of the original fictional restaurant rows and record aggregate member/review/favorite counts. Verify list/detail/filter output, all image URLs, replay idempotency and unchanged user data afterward. Do not commit database credentials, backups with user data, or private environment files.
+
+The additive ten-province live import executes only the marked `additional_places` INSERT block from `seed.sql`, after backing up the existing restaurant rows and confirming the target provinces are empty. It does not execute the earlier fictional-row retirement block. Validate the original twenty rows field-for-field, unchanged member/review/favorite counts, thirty rows across nineteen provinces, and identical restaurant IDs/fields after replay. See [the additive import results](TEN_NEW_PROVINCES_IMPORT_RESULTS.md).
 
 ## Other user-supplied sources
 
