@@ -5,7 +5,7 @@ services:
     runtime: docker
     plan: free
     region: singapore
-    branch: feat/thaifood-guide-backend
+    branch: main
     # Render เรียก endpoint นี้ตรวจความพร้อมของ API ซึ่งรวมการเชื่อมต่อฐานข้อมูลด้วย
     healthCheckPath: /health
     # ปิด deploy อัตโนมัติ เพื่อให้เลือกปล่อย revision ที่ตรวจสอบแล้ว

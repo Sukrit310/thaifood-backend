@@ -130,7 +130,7 @@ npx newman run postman/ThaiFood_Guide.postman_collection.json \
 
 ## Deploy Render
 
-`render.yaml` ตั้ง Docker web service, free plan, Singapore, branch `feat/thaifood-guide-backend`, health check `/health` และปิด auto deploy เพื่อให้ทดสอบก่อนแต่ละ release ไม่มีการสร้างฐานข้อมูล Render เพราะใช้ Supabase
+`render.yaml` ตั้ง Docker web service, free plan, Singapore, branch `main`, health check `/health` และปิด auto deploy เพื่อให้ทดสอบก่อนแต่ละ release ไม่มีการสร้างฐานข้อมูล Render เพราะใช้ Supabase
 
 1. ทดสอบตามหัวข้อด้านบนก่อน push branch นี้ไป repository ThaiFood
 2. ตั้ง Supabase project และรัน `migrate`/`seed` ด้วย `DATABASE_URL` ของโปรเจกต์นั้น จากเครื่องที่เชื่อมต่อได้ (free Render ไม่มี pre-deploy command)
