@@ -1,9 +1,11 @@
+# ไฟล์นี้กำหนด CI ตรวจรูปแบบโค้ด วิเคราะห์โค้ด ทดสอบ และ build ทุกครั้งที่ push หรือเปิด pull request
 name: Backend checks
 
 on:
   push:
   pull_request:
 
+# ให้ workflow อ่าน repository ได้เท่าที่จำเป็นสำหรับ checkout โค้ด
 permissions:
   contents: read
 
@@ -11,6 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     services:
+      # เปิด PostgreSQL สำหรับ integration tests โดยใช้ข้อมูลรับรองเฉพาะ CI
       postgres:
         image: postgres:17-alpine
         env:
@@ -19,12 +22,14 @@ jobs:
           POSTGRES_DB: thaifood_test
         ports:
           - 5432:5432
+        # รอจน PostgreSQL รับ connection ได้ก่อนเริ่ม steps ทดสอบ
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
+      # ให้ชุดทดสอบสร้าง schema ชั่วคราวใน PostgreSQL ของ job นี้
       TEST_DATABASE_URL: postgres://postgres:ci-only-test-password@localhost:5432/thaifood_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +37,7 @@ jobs:
         with:
           go-version: "1.27.4"
           cache: true
+      # gofmt ตรวจรูปแบบ, vet วิเคราะห์ข้อผิดพลาด, race ตรวจการเข้าถึงข้อมูลพร้อมกัน แล้วจึง build binary
       - name: Check formatting
         run: test -z "$(gofmt -l $(find . -name '*.go'))"
       - run: go vet ./...

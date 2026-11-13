@@ -1,3 +1,4 @@
+// ไฟล์ handler/restaurants.go: อ่านจังหวัด/ประเภทอาหาร ค้นหาร้าน และตรวจข้อมูลสำหรับให้ admin จัดการร้าน
 package handler
 
 import (
@@ -11,6 +12,7 @@ import (
 	"thaifood-backend/store"
 )
 
+// ListProvinces ส่งรายการจังหวัดพร้อมชื่อไทยและภูมิภาค
 func (h *Handler) ListProvinces(w http.ResponseWriter, r *http.Request) {
 	list, err := h.Store.ListProvinces(r.Context())
 	if err != nil {
@@ -19,6 +21,8 @@ func (h *Handler) ListProvinces(w http.ResponseWriter, r *http.Request) {
 	}
 	items(w, list)
 }
+
+// ListCategories ส่งรายการประเภทอาหารที่ใช้เป็นตัวกรองและอ้างอิงตอนสร้างร้าน
 func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	list, err := h.Store.ListCategories(r.Context())
 	if err != nil {
@@ -27,6 +31,8 @@ func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	}
 	items(w, list)
 }
+
+// ListRestaurants ตรวจ query parameters ใช้ค่าเริ่มต้น page=1/limit=12 จำกัด limit ที่ 50 และส่งผลพร้อมจำนวนรวม
 func (h *Handler) ListRestaurants(w http.ResponseWriter, r *http.Request) {
 	query, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
@@ -73,6 +79,8 @@ func (h *Handler) ListRestaurants(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 200, map[string]any{"items": list, "page": filter.Page, "limit": filter.Limit, "total": total})
 }
+
+// GetRestaurant ตรวจรหัสร้านและส่งรายละเอียดพร้อมคะแนนเฉลี่ยและจำนวนรีวิว
 func (h *Handler) GetRestaurant(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "id")
 	if err != nil {
@@ -87,6 +95,7 @@ func (h *Handler) GetRestaurant(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, restaurant)
 }
 
+// restaurantInput ตรวจฟิลด์ร้านตามโหมดสร้าง/แก้ไข รวมถึงพิกัดที่ต้องส่งเป็นคู่และ URL รูปภาพ
 func restaurantInput(w http.ResponseWriter, r *http.Request, create bool) (store.RestaurantInput, error) {
 	var raw map[string]json.RawMessage
 	if err := body(w, r, &raw); err != nil {
@@ -137,6 +146,7 @@ func restaurantInput(w http.ResponseWriter, r *http.Request, create bool) (store
 	if in.Latitude != nil && (*in.Latitude < -90 || *in.Latitude > 90 || *in.Longitude < -180 || *in.Longitude > 180) {
 		return in, errors.New("Coordinates are out of range")
 	}
+	// แยก imageUrl ที่ไม่ได้ส่ง (คงรูปเดิม) ออกจากการส่ง null (ล้างรูป)
 	_, in.ImageURLSet = raw["imageUrl"]
 	if in.ImageURL != nil {
 		*in.ImageURL = strings.TrimSpace(*in.ImageURL)
@@ -147,6 +157,8 @@ func restaurantInput(w http.ResponseWriter, r *http.Request, create bool) (store
 	}
 	return in, nil
 }
+
+// CreateRestaurant ตรวจฟิลด์บังคับแล้วสร้างร้านใหม่ผ่าน endpoint สำหรับ admin
 func (h *Handler) CreateRestaurant(w http.ResponseWriter, r *http.Request) {
 	in, err := restaurantInput(w, r, true)
 	if err != nil {
@@ -160,6 +172,8 @@ func (h *Handler) CreateRestaurant(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 201, restaurant)
 }
+
+// UpdateRestaurant ตรวจข้อมูลที่ส่งมาและแก้เฉพาะฟิลด์ที่ระบุ โดยฟิลด์ที่ละไว้คงค่าเดิม
 func (h *Handler) UpdateRestaurant(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "id")
 	if err != nil {
@@ -178,6 +192,8 @@ func (h *Handler) UpdateRestaurant(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 200, restaurant)
 }
+
+// DeleteRestaurant ลบร้านตาม ID โดยฐานข้อมูลจะลบรีวิวและรายการโปรดที่อ้างถึงตาม foreign key
 func (h *Handler) DeleteRestaurant(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "id")
 	if err != nil {

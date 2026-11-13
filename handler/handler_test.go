@@ -1,3 +1,4 @@
+// ไฟล์ handler/handler_test.go: ใช้ repository จำลองทดสอบ routing, pagination, validation และสิทธิ์ โดยไม่เชื่อมฐานข้อมูล
 package handler
 
 import (
@@ -12,6 +13,7 @@ import (
 	"thaifood-backend/store"
 )
 
+// testStore เก็บข้อมูลที่ส่งเข้า repository และกำหนดผลตอบกลับสำหรับ unit test ของ handler
 type testStore struct {
 	store.Repository
 	filter                   store.RestaurantFilter
@@ -22,24 +24,36 @@ type testStore struct {
 	reviewText               string
 }
 
+// Ping จำลองผลการตรวจฐานข้อมูลตาม error ที่แต่ละกรณีทดสอบกำหนด
 func (s *testStore) Ping(context.Context) error { return s.err }
+
+// ListRestaurants เก็บ filter ที่ handler ส่งมาและคืนรายการว่างสำหรับตรวจ pagination
 func (s *testStore) ListRestaurants(_ context.Context, f store.RestaurantFilter) ([]store.Restaurant, int64, error) {
 	s.filter = f
 	return nil, 0, s.err
 }
+
+// MemberByID คืนสมาชิกจำลองให้ middleware ใช้ตรวจตัวตนและสิทธิ์
 func (s *testStore) MemberByID(context.Context, int64) (store.Member, error) { return s.member, s.err }
+
+// MemberByEmail คืนสมาชิกหรือ error จำลองสำหรับทดสอบการเข้าสู่ระบบ
 func (s *testStore) MemberByEmail(context.Context, string) (store.Member, error) {
 	return s.member, s.err
 }
+
+// CreateMember เก็บข้อมูลสมัครที่ได้รับ เพื่อตรวจการปรับอีเมล ชื่อ และ password hash
 func (s *testStore) CreateMember(_ context.Context, email, hash, displayName string) (store.Member, error) {
 	s.email, s.hash, s.displayName = email, hash, displayName
 	return store.Member{ID: 1, Email: email, PasswordHash: hash, DisplayName: displayName, Role: "member"}, s.err
 }
+
+// CreateReview เก็บคะแนนและข้อความที่ผ่าน validation แล้ว เพื่อตรวจค่าที่จะถูกบันทึก
 func (s *testStore) CreateReview(_ context.Context, restaurantID, memberID int64, rating int, text string) (store.Review, error) {
 	s.rating, s.reviewText = rating, text
 	return store.Review{ID: 1, RestaurantID: restaurantID, Rating: rating, Text: text, Member: store.ReviewMember{ID: memberID, DisplayName: s.member.DisplayName}}, s.err
 }
 
+// TestPublicErrorsAndPagination ตรวจสถานะและรูปแบบ error ค่า pagination และการไม่เปิดเผยรายละเอียดฐานข้อมูล
 func TestPublicErrorsAndPagination(t *testing.T) {
 	s := &testStore{}
 	h := (&Handler{Store: s, Tickets: &auth.Issuer{Secret: []byte(strings.Repeat("x", 32))}}).Routes()
@@ -91,6 +105,7 @@ func TestPublicErrorsAndPagination(t *testing.T) {
 	}
 }
 
+// TestRestaurantInputValidation ตรวจฟิลด์ร้านที่ผิดรูปแบบและความหมายของ imageUrl ที่ส่งเป็น null
 func TestRestaurantInputValidation(t *testing.T) {
 	for _, body := range []string{`{}`, `{"name":null}`, `{"latitude":91,"longitude":100}`, `{"latitude":10}`, `{"imageUrl":"javascript:alert(1)"}`, `{"provinceId":0}`, `{"role":"admin"}`} {
 		r := httptest.NewRequest("PUT", "/", strings.NewReader(body))
@@ -107,6 +122,7 @@ func TestRestaurantInputValidation(t *testing.T) {
 	}
 }
 
+// TestMemberCannotUseAdminRoute ตรวจว่า JWT ของ member เข้า endpoint สำหรับ admin แล้วได้ 403
 func TestMemberCannotUseAdminRoute(t *testing.T) {
 	issuer := &auth.Issuer{Secret: []byte(strings.Repeat("x", 32))}
 	token, err := issuer.Issue(1)

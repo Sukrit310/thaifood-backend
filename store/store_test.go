@@ -1,3 +1,4 @@
+// ไฟล์ store/store_test.go: ทดสอบ SQL กับ PostgreSQL จริงใน schema แยก โดยข้ามเมื่อไม่ได้ตั้ง TEST_DATABASE_URL
 package store
 
 import (
@@ -16,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// testStore สร้าง schema ชั่วคราว รัน schema/seed ซ้ำเพื่อทดสอบ idempotence และลงทะเบียน cleanup เมื่องานจบ
 func testStore(t *testing.T) *Store {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
@@ -55,6 +57,7 @@ func testStore(t *testing.T) *Store {
 	return &Store{Pool: pool}
 }
 
+// TestSeedIsIdempotentAndHasAllProvinces ตรวจ 77 จังหวัด 59 ร้านใน 42 จังหวัด คะแนนเริ่มต้น และ RLS ของทุกตาราง
 func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -91,6 +94,7 @@ func TestSeedIsIdempotentAndHasAllProvinces(t *testing.T) {
 	}
 }
 
+// TestSeedProvidesRealRestaurantsWithAttributedPhotos ตรวจ URL รูปภาพจริงและเครดิตแหล่งข้อมูล/ใบอนุญาตของทุกร้าน
 func TestSeedProvidesRealRestaurantsWithAttributedPhotos(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -117,6 +121,7 @@ func TestSeedProvidesRealRestaurantsWithAttributedPhotos(t *testing.T) {
 	}
 }
 
+// TestReseedRetiresOnlyUntouchedUnreferencedFictionalRestaurants ตรวจว่ารัน seed ซ้ำลบเฉพาะร้านสมมติที่ยังไม่ถูกใช้หรือแก้ไข
 func TestReseedRetiresOnlyUntouchedUnreferencedFictionalRestaurants(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -152,7 +157,7 @@ func TestReseedRetiresOnlyUntouchedUnreferencedFictionalRestaurants(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Edits to real source records must survive reseeding.
+	// ข้อมูลร้านจริงที่ admin เคยแก้ไขต้องไม่ถูก seed เขียนทับ
 	var editedID int64
 	err = s.Pool.QueryRow(ctx, `UPDATE restaurants SET description='คำอธิบายที่ผู้ดูแลแก้ไข'
 		WHERE id=(SELECT min(id) FROM restaurants WHERE source_name IS DISTINCT FROM 'ThaiFood Guide author-created fictional sample') RETURNING id`).Scan(&editedID)
@@ -190,6 +195,7 @@ func TestReseedRetiresOnlyUntouchedUnreferencedFictionalRestaurants(t *testing.T
 	}
 }
 
+// TestMemberUniquenessPasswordCASAndSafeJSON ตรวจอีเมลซ้ำ hash เดิมก่อนเปลี่ยนรหัสผ่าน และ JSON ที่ซ่อน hash
 func TestMemberUniquenessPasswordCASAndSafeJSON(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -222,6 +228,7 @@ func TestMemberUniquenessPasswordCASAndSafeJSON(t *testing.T) {
 	}
 }
 
+// TestPartialRestaurantUpdateAndExplicitImageClear ตรวจการแก้เฉพาะฟิลด์ ล้างรูป กรองชื่อไทย และผลลัพธ์ว่าง
 func TestPartialRestaurantUpdateAndExplicitImageClear(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -266,6 +273,7 @@ func TestPartialRestaurantUpdateAndExplicitImageClear(t *testing.T) {
 	}
 }
 
+// TestDatabaseConstraintsProtectInvalidDirectWrites ตรวจว่า constraint ป้องกันข้อมูลผิดแม้เขียนผ่าน store/SQL โดยตรง
 func TestDatabaseConstraintsProtectInvalidDirectWrites(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -299,6 +307,7 @@ func TestDatabaseConstraintsProtectInvalidDirectWrites(t *testing.T) {
 	}
 }
 
+// TestRestaurantSearchReviewOwnershipAggregatesAndCascade ตรวจค้นหาตามตัวอักษร สิทธิ์เจ้าของ คะแนนรวม และการลบข้อมูลลูก
 func TestRestaurantSearchReviewOwnershipAggregatesAndCascade(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -370,6 +379,7 @@ func TestRestaurantSearchReviewOwnershipAggregatesAndCascade(t *testing.T) {
 	}
 }
 
+// TestConcurrentDuplicateReviewOnlyOneSucceeds ส่งรีวิวซ้ำพร้อมกัน 8 ครั้งและตรวจว่าสร้างสำเร็จเพียงหนึ่งรายการ
 func TestConcurrentDuplicateReviewOnlyOneSucceeds(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()

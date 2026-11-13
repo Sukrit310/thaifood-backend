@@ -1,3 +1,4 @@
+// ไฟล์ internal/config/config.go: อ่านและตรวจสอบ environment variables ที่จำเป็นสำหรับเปิด API
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"strings"
 )
 
+// Config รวมค่าที่ใช้เชื่อมฐานข้อมูล ลงลายเซ็น JWT อนุญาต CORS และเลือกพอร์ต HTTP
 type Config struct {
 	DatabaseURL    string
 	JWTSecret      string
@@ -15,6 +17,7 @@ type Config struct {
 	Port           string
 }
 
+// Load ตรวจ DATABASE_URL, JWT_SECRET, PORT และรายการ origin พร้อมตั้งค่าเริ่มต้นของพอร์ตและ CORS
 func Load() (Config, error) {
 	c := Config{DatabaseURL: os.Getenv("DATABASE_URL"), JWTSecret: os.Getenv("JWT_SECRET"), Port: os.Getenv("PORT")}
 	if c.DatabaseURL == "" {

@@ -1,3 +1,4 @@
+// ไฟล์ store/models.go: กำหนดโครงสร้างข้อมูล JSON, input/filter และสัญญา Repository ที่แยก handler ออกจากฐานข้อมูล
 package store
 
 import (
@@ -6,6 +7,7 @@ import (
 	"time"
 )
 
+// Error กลางที่ handler ใช้แปลงผลลัพธ์จากฐานข้อมูลเป็น HTTP โดยไม่พึ่งรายละเอียด driver
 var (
 	ErrNotFound   = errors.New("not found")
 	ErrConflict   = errors.New("conflict")
@@ -14,6 +16,7 @@ var (
 	ErrLastAdmin  = errors.New("last admin")
 )
 
+// Member เก็บข้อมูลสมาชิก; json:"-" ทำให้ PasswordHash ไม่ถูกส่งกลับใน API response
 type Member struct {
 	ID           int64  `json:"id"`
 	Email        string `json:"email"`
@@ -22,17 +25,20 @@ type Member struct {
 	PasswordHash string `json:"-"`
 }
 
+// Province เป็นข้อมูลจังหวัดที่ใช้แสดงชื่อไทย ภูมิภาค และเป็นรายการอ้างอิงของร้าน
 type Province struct {
 	ID     int64  `json:"id"`
 	NameTh string `json:"nameTh"`
 	Region string `json:"region"`
 }
 
+// Category เป็นประเภทอาหารที่ใช้จัดหมวดหมู่และกรองร้าน
 type Category struct {
 	ID     int64  `json:"id"`
 	NameTh string `json:"nameTh"`
 }
 
+// Restaurant คือข้อมูลร้านสำหรับ API; pointer รองรับค่า null สำหรับพิกัด รูป และคะแนนที่ยังไม่มี
 type Restaurant struct {
 	ID          int64    `json:"id"`
 	Name        string   `json:"name"`
@@ -47,11 +53,13 @@ type Restaurant struct {
 	ReviewCount int64    `json:"reviewCount"`
 }
 
+// ReviewMember เปิดเผยเฉพาะ ID และชื่อแสดงผลของผู้เขียนรีวิว
 type ReviewMember struct {
 	ID          int64  `json:"id"`
 	DisplayName string `json:"displayName"`
 }
 
+// Review รวมคะแนน ข้อความ เวลา และข้อมูลผู้เขียนที่เปิดเผยได้
 type Review struct {
 	ID           int64        `json:"id"`
 	RestaurantID int64        `json:"restaurantId"`
@@ -61,13 +69,14 @@ type Review struct {
 	Member       ReviewMember `json:"member"`
 }
 
+// RestaurantFilter เก็บชื่อจังหวัด/ประเภท คำค้น และการแบ่งหน้าที่ผ่าน validation จาก handler แล้ว
 type RestaurantFilter struct {
 	Province, Category, Query string
 	Page, Limit               int
 }
 
-// RestaurantInput uses pointers to preserve omitted fields on updates. ImageURLSet
-// distinguishes an omitted imageUrl from an explicit null that clears the image.
+// RestaurantInput ใช้ pointer แยกฟิลด์ที่ละไว้เพื่อคงค่าเดิมตอนแก้ไข
+// ImageURLSet แยกการไม่ส่ง imageUrl ออกจากการส่ง null เพื่อล้างรูป
 type RestaurantInput struct {
 	Name        *string  `json:"name"`
 	ProvinceID  *int64   `json:"provinceId"`
@@ -80,6 +89,7 @@ type RestaurantInput struct {
 	ImageURLSet bool     `json:"-"`
 }
 
+// Repository กำหนดงานข้อมูลที่ handler เรียกใช้ โดยไม่ผูกกับ PostgreSQL implementation โดยตรง
 type Repository interface {
 	Ping(context.Context) error
 	CreateMember(context.Context, string, string, string) (Member, error)

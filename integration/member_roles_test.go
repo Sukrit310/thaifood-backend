@@ -1,3 +1,4 @@
+// ไฟล์ integration/member_roles_test.go: ทดสอบสิทธิ์สมาชิกผ่าน HTTP และฐานข้อมูลจริง รวมผลต่อ JWT เดิมและคำขอที่เกิดพร้อมกัน
 package integration
 
 import (
@@ -9,6 +10,7 @@ import (
 	"testing"
 )
 
+// TestAdminMemberRoles ตรวจเลื่อน/ลดสิทธิ์ การห้ามแก้ตนเอง validation และการที่ JWT เดิมใช้สิทธิ์ใหม่ได้ทันที
 func TestAdminMemberRoles(t *testing.T) {
 	a := newAPI(t)
 	actorID, actorToken := a.register("actor@example.com")
@@ -28,7 +30,7 @@ func TestAdminMemberRoles(t *testing.T) {
 	if a.request("GET", "/api/me", targetToken, nil, 200)["role"] != "admin" {
 		t.Fatal("promotion was not persisted")
 	}
-	// The original token gains access immediately, without another login.
+	// JWT เดิมต้องใช้สิทธิ์ admin ที่เพิ่งได้รับได้ทันที โดยไม่ต้องเข้าสู่ระบบใหม่
 	a.request("GET", "/api/admin/members", targetToken, nil, 200)
 	a.request("PATCH", path, actorToken, `{"role":"admin"}`, 200)
 	for _, tokenAndID := range []struct {
@@ -69,6 +71,7 @@ func TestAdminMemberRoles(t *testing.T) {
 	}
 }
 
+// TestAdminMemberRolesConcurrentCrossDemotions ส่ง HTTP ให้ admin ลดสิทธิ์กันพร้อมกัน และตรวจว่ายังเหลือ admin หนึ่งคน
 func TestAdminMemberRolesConcurrentCrossDemotions(t *testing.T) {
 	a := newAPI(t)
 	idA, tokenA := a.register("a@example.com")

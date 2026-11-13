@@ -1,3 +1,4 @@
+// ไฟล์ handler/validation_test.go: ทดสอบเงื่อนไขข้อมูลรับเข้าและการไม่เปิดเผยข้อมูลลับใน response ของ handler
 package handler
 
 import (
@@ -10,6 +11,7 @@ import (
 	"thaifood-backend/store"
 )
 
+// TestRegisterNormalizesAndNeverExposesHash ตรวจการปรับอีเมล/ชื่อ การ hash และการซ่อน hash ใน response
 func TestRegisterNormalizesAndNeverExposesHash(t *testing.T) {
 	s := &testStore{}
 	h := (&Handler{Store: s, Tickets: &auth.Issuer{Secret: []byte(strings.Repeat("x", 32))}}).Routes()
@@ -28,6 +30,7 @@ func TestRegisterNormalizesAndNeverExposesHash(t *testing.T) {
 	}
 }
 
+// TestReviewUsesUnicodeLengthAndRejectsFractions ตรวจความยาวรีวิวภาษาไทย คะแนนจำนวนเต็ม และการตัดช่องว่าง
 func TestReviewUsesUnicodeLengthAndRejectsFractions(t *testing.T) {
 	issuer := &auth.Issuer{Secret: []byte(strings.Repeat("x", 32))}
 	token, err := issuer.Issue(1)
@@ -58,6 +61,7 @@ func TestReviewUsesUnicodeLengthAndRejectsFractions(t *testing.T) {
 	}
 }
 
+// TestStoreErrorMapping ตรวจการแปลง store error เป็นสถานะ/รหัส API โดยไม่รั่วรายละเอียดภายใน
 func TestStoreErrorMapping(t *testing.T) {
 	for _, tt := range []struct {
 		err    error
@@ -72,6 +76,7 @@ func TestStoreErrorMapping(t *testing.T) {
 	}
 }
 
+// TestBodyRejectsNonJSONAndOversize ตรวจ body ที่เกิน 1 MiB ชนิดข้อมูลไม่ใช่ JSON และ JSON มากกว่าหนึ่งค่า
 func TestBodyRejectsNonJSONAndOversize(t *testing.T) {
 	for _, tt := range []struct{ body, media string }{{strings.Repeat("x", (1<<20)+1), "application/json"}, {`{"displayName":"Demo"}`, "text/plain"}, {`{"displayName":"Demo"} null`, "application/json"}} {
 		w := httptest.NewRecorder()
@@ -86,6 +91,7 @@ func TestBodyRejectsNonJSONAndOversize(t *testing.T) {
 	}
 }
 
+// TestRestaurantDescriptionMatchesDatabaseLimit ตรวจว่า handler ปฏิเสธคำอธิบายยาวเกินข้อจำกัดฐานข้อมูล
 func TestRestaurantDescriptionMatchesDatabaseLimit(t *testing.T) {
 	encoded, err := json.Marshal(map[string]string{"description": strings.Repeat("ก", 5001)})
 	if err != nil {
@@ -97,6 +103,7 @@ func TestRestaurantDescriptionMatchesDatabaseLimit(t *testing.T) {
 	}
 }
 
+// TestRestaurantFiltersRejectInvalidUTF8 ตรวจว่า filter ที่มี UTF-8 ผิดรูปแบบถูกปฏิเสธก่อนเรียก store
 func TestRestaurantFiltersRejectInvalidUTF8(t *testing.T) {
 	s := &testStore{}
 	h := (&Handler{Store: s}).Routes()

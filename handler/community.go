@@ -1,3 +1,4 @@
+// ไฟล์ handler/community.go: จัดการรีวิวและร้านโปรด โดยผูกการเขียนข้อมูลกับสมาชิกที่เข้าสู่ระบบ
 package handler
 
 import (
@@ -9,6 +10,7 @@ import (
 	"thaifood-backend/store"
 )
 
+// ListReviews ตรวจรหัสร้านและส่งรายการรีวิวพร้อมข้อมูลผู้เขียน
 func (h *Handler) ListReviews(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "id")
 	if err != nil {
@@ -22,6 +24,8 @@ func (h *Handler) ListReviews(w http.ResponseWriter, r *http.Request) {
 	}
 	items(w, list)
 }
+
+// CreateReview รับคะแนนจำนวนเต็ม 1–5 กับข้อความ 10–5000 ตัวอักษร และใช้สมาชิกใน context เป็นผู้เขียน
 func (h *Handler) CreateReview(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "id")
 	if err != nil {
@@ -52,6 +56,8 @@ func (h *Handler) CreateReview(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 201, review)
 }
+
+// DeleteReview ส่งรหัสผู้ขอลบและสถานะ admin ให้ store ตรวจว่าเป็นเจ้าของรีวิวหรือมีสิทธิ์ดูแล
 func (h *Handler) DeleteReview(w http.ResponseWriter, r *http.Request) {
 	reviewID, err := id(r, "id")
 	if err != nil {
@@ -65,6 +71,8 @@ func (h *Handler) DeleteReview(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 204, nil)
 }
+
+// ListFavorites ส่งเฉพาะร้านโปรดของสมาชิกที่เข้าสู่ระบบ
 func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 	member, _ := mw.Member(r.Context())
 	list, err := h.Store.ListFavorites(r.Context(), member.ID)
@@ -74,6 +82,8 @@ func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
 	}
 	items(w, list)
 }
+
+// CreateFavorite เพิ่มร้านในรายการโปรดของสมาชิก และแปลงกรณีร้านไม่มีอยู่เป็น 404
 func (h *Handler) CreateFavorite(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		RestaurantID int64 `json:"restaurantId"`
@@ -97,6 +107,8 @@ func (h *Handler) CreateFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 201, in)
 }
+
+// DeleteFavorite ลบรายการโปรดโดยระบุทั้งรหัสร้านและรหัสสมาชิก เพื่อไม่กระทบรายการของผู้อื่น
 func (h *Handler) DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 	restaurantID, err := id(r, "restaurantId")
 	if err != nil {

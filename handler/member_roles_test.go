@@ -1,3 +1,4 @@
+// ไฟล์ handler/member_roles_test.go: ทดสอบ endpoint เปลี่ยนสิทธิ์ด้วย repository จำลอง ครอบคลุม authorization, validation และ response
 package handler
 
 import (
@@ -12,6 +13,7 @@ import (
 	"thaifood-backend/store"
 )
 
+// roleStore จำลองผู้กระทำ ผลลัพธ์ และการเรียกเปลี่ยน role โดยไม่ต้องเปิด PostgreSQL
 type roleStore struct {
 	store.Repository
 	actor             store.Member
@@ -22,16 +24,19 @@ type roleStore struct {
 	role              string
 }
 
+// MemberByID คืนผู้กระทำจำลองให้ middleware ตรวจสิทธิ์ก่อนเข้า endpoint
 func (s *roleStore) MemberByID(context.Context, int64) (store.Member, error) {
 	return s.actor, nil
 }
 
+// UpdateMemberRole บันทึกจำนวนครั้งและ arguments ที่ได้รับ แล้วคืนสมาชิกหรือ error ตามกรณีทดสอบ
 func (s *roleStore) UpdateMemberRole(_ context.Context, actorID, targetID int64, role string) (store.Member, error) {
 	s.calls++
 	s.actorID, s.targetID, s.role = actorID, targetID, role
 	return s.updated, s.err
 }
 
+// roleRequest สร้าง HTTP request สำหรับเปลี่ยน role พร้อมเลือก token, body และ Content-Type ที่ต้องการทดสอบ
 func roleRequest(t *testing.T, s *roleStore, method, target, tokenKind, payload, media string) *httptest.ResponseRecorder {
 	t.Helper()
 	issuer := &auth.Issuer{Secret: []byte(strings.Repeat("x", 32))}
@@ -53,6 +58,7 @@ func roleRequest(t *testing.T, s *roleStore, method, target, tokenKind, payload,
 	return w
 }
 
+// TestUpdateMemberRoleAuthorization ตรวจว่า guest, token ผิด, member และผู้ที่แก้ role ตัวเองไม่ถึงขั้นเขียนฐานข้อมูล
 func TestUpdateMemberRoleAuthorization(t *testing.T) {
 	for _, tt := range []struct {
 		name, token, actorRole, target string
@@ -80,6 +86,7 @@ func TestUpdateMemberRoleAuthorization(t *testing.T) {
 	}
 }
 
+// TestUpdateMemberRoleValidation ตรวจ ID, JSON, role และฟิลด์เกินก่อนเรียก repository
 func TestUpdateMemberRoleValidation(t *testing.T) {
 	for _, tt := range []struct{ name, target, payload, media string }{
 		{"zero id", "0", `{"role":"admin"}`, "application/json"},
@@ -121,6 +128,7 @@ func TestUpdateMemberRoleValidation(t *testing.T) {
 	}
 }
 
+// TestUpdateMemberRoleReturnsMember ตรวจ arguments ของการเปลี่ยนสิทธิ์และ response สมาชิกที่ไม่มี password hash
 func TestUpdateMemberRoleReturnsMember(t *testing.T) {
 	for _, role := range []string{"admin", "member"} {
 		t.Run(role, func(t *testing.T) {
@@ -149,6 +157,7 @@ func TestUpdateMemberRoleReturnsMember(t *testing.T) {
 	}
 }
 
+// TestUpdateMemberRoleStoreErrors ตรวจสถานะและรหัส error เมื่อ repository ปฏิเสธการเปลี่ยนสิทธิ์
 func TestUpdateMemberRoleStoreErrors(t *testing.T) {
 	for _, tt := range []struct {
 		err    error
@@ -172,6 +181,7 @@ func TestUpdateMemberRoleStoreErrors(t *testing.T) {
 	}
 }
 
+// assertRoleError ตรวจ HTTP status และโครงสร้าง JSON error พร้อมรหัสที่คาดหวัง
 func assertRoleError(t *testing.T, w *httptest.ResponseRecorder, status int, code string) {
 	t.Helper()
 	var out struct {

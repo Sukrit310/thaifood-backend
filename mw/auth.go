@@ -1,3 +1,4 @@
+// ไฟล์ mw/auth.go: ตรวจการเข้าสู่ระบบและสิทธิ์ พร้อมส่งข้อมูลสมาชิกผ่าน context ของ request
 package mw
 
 import (
@@ -10,19 +11,21 @@ import (
 	"thaifood-backend/store"
 )
 
+// ใช้ชนิด key ที่ไม่เปิดเผยนอกแพ็กเกจ เพื่อไม่ชนกับค่าที่ส่วนอื่นเก็บใน context
 type memberContextKey struct{}
 
+// WithMember แนบสมาชิกที่ตรวจสอบแล้วลงใน context โดยใช้ชนิด key เฉพาะเพื่อป้องกันชื่อชนกัน
 func WithMember(ctx context.Context, member store.Member) context.Context {
 	return context.WithValue(ctx, memberContextKey{}, member)
 }
 
+// Member อ่านสมาชิกจาก context และระบุว่าพบข้อมูลที่มี ID ถูกต้องหรือไม่
 func Member(ctx context.Context) (store.Member, bool) {
 	m, ok := ctx.Value(memberContextKey{}).(store.Member)
 	return m, ok && m.ID > 0
 }
 
-// RequireLogin reloads the member for every request. Tokens identify a member;
-// current database data, rather than token claims, determines their role.
+// RequireLogin ตรวจ Bearer token แล้วโหลดสมาชิกจากฐานข้อมูลใหม่ทุก request เพื่อใช้สิทธิ์ล่าสุด
 func RequireLogin(tickets *auth.Issuer, repository interface {
 	MemberByID(context.Context, int64) (store.Member, error)
 }, next http.HandlerFunc) http.HandlerFunc {
@@ -37,6 +40,7 @@ func RequireLogin(tickets *auth.Issuer, repository interface {
 			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "A valid Bearer token is required")
 			return
 		}
+		// JWT ใช้ระบุตัวตนเท่านั้น; role และการมีอยู่ของบัญชีต้องอ่านจากฐานข้อมูลปัจจุบัน
 		ctx, cancel := context.WithTimeout(r.Context(), databaseTimeout)
 		defer cancel()
 		member, err := repository.MemberByID(ctx, id)
@@ -56,6 +60,7 @@ func RequireLogin(tickets *auth.Issuer, repository interface {
 	}
 }
 
+// RequireRole อนุญาตเฉพาะสมาชิกใน context ที่มี role ตรงกับสิทธิ์ที่ endpoint ต้องการ
 func RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		member, ok := Member(r.Context())

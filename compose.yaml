@@ -1,3 +1,4 @@
+# ไฟล์นี้เปิด PostgreSQL สำหรับพัฒนา/ทดสอบในเครื่อง โดยต้องตั้ง POSTGRES_PASSWORD ก่อนรัน
 services:
   postgres:
     image: postgres:17-alpine
@@ -6,7 +7,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for the local test database}
       POSTGRES_DB: thaifood_test
     ports:
+      # เปิดพอร์ตเฉพาะ loopback เพื่อให้เข้าฐานข้อมูลผ่านเครื่องนี้เท่านั้น
       - "127.0.0.1:5432:5432"
+    # ให้ docker compose up --wait รอจน PostgreSQL พร้อมใช้งาน
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d thaifood_test"]
       interval: 5s

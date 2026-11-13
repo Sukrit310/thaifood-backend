@@ -1,3 +1,4 @@
+// ไฟล์ store/member_roles_test.go: ทดสอบ transaction เปลี่ยน role กับ PostgreSQL จริง รวมการแย่ง lock และการลดสิทธิ์พร้อมกัน
 package store
 
 import (
@@ -8,6 +9,7 @@ import (
 	"time"
 )
 
+// roleMember สร้างสมาชิกทดสอบและตั้ง role เริ่มต้นผ่าน SQL ใน schema ทดสอบเท่านั้น
 func roleMember(t *testing.T, s *Store, email, role string) Member {
 	t.Helper()
 	m, err := s.CreateMember(context.Background(), email, "test-only-hash", "สมาชิกทดสอบ")
@@ -23,6 +25,7 @@ func roleMember(t *testing.T, s *Store, email, role string) Member {
 	return m
 }
 
+// TestUpdateMemberRolePersistenceAndIdempotence ตรวจการบันทึก role และการส่งค่าเดิมซ้ำโดยไม่เปลี่ยน updated_at
 func TestUpdateMemberRolePersistenceAndIdempotence(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -57,6 +60,7 @@ func TestUpdateMemberRolePersistenceAndIdempotence(t *testing.T) {
 	}
 }
 
+// TestUpdateMemberRoleGuards ตรวจสิทธิ์ผู้กระทำ การแก้ตนเอง และการคืน lock หลัง transaction ถูกปฏิเสธ
 func TestUpdateMemberRoleGuards(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
@@ -91,12 +95,13 @@ func TestUpdateMemberRoleGuards(t *testing.T) {
 			}
 		})
 	}
-	// Failed transactions must release their locks so the next valid update works.
+	// transaction ที่ถูกปฏิเสธต้องคืน lock เพื่อไม่ขวางคำขอที่ถูกต้องในครั้งถัดไป
 	if _, err := s.UpdateMemberRole(ctx, actor.ID, target.ID, "admin"); err != nil {
 		t.Fatal("update after rejected requests:", err)
 	}
 }
 
+// TestUpdateMemberRoleConcurrentCrossDemotions ให้ admin สองคนลดสิทธิ์กันพร้อมกัน แล้วตรวจว่าสำเร็จหนึ่งครั้งและยังเหลือ admin
 func TestUpdateMemberRoleConcurrentCrossDemotions(t *testing.T) {
 	s := testStore(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -134,6 +139,7 @@ func TestUpdateMemberRoleConcurrentCrossDemotions(t *testing.T) {
 	assertAdminCount(t, s, 1)
 }
 
+// TestUpdateMemberRoleRechecksActorAfterLockWait ตรวจว่าผู้ที่ถูกลดสิทธิ์ระหว่างรอ lock ไม่สามารถใช้สิทธิ์ admin เดิมได้
 func TestUpdateMemberRoleRechecksActorAfterLockWait(t *testing.T) {
 	s := testStore(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -153,7 +159,7 @@ func TestUpdateMemberRoleRechecksActorAfterLockWait(t *testing.T) {
 		_, err := s.UpdateMemberRole(ctx, b.ID, a.ID, "member")
 		done <- err
 	}()
-	// Wait for a real blocked database lock rather than guessing with a sleep.
+	// รอจนฐานข้อมูลรายงานว่าติด lock จริง เพื่อทดสอบลำดับเหตุการณ์อย่างแน่นอน
 	for {
 		var waiting bool
 		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks WHERE relation='members'::regclass AND NOT granted)`).Scan(&waiting); err != nil {
@@ -184,6 +190,7 @@ func TestUpdateMemberRoleRechecksActorAfterLockWait(t *testing.T) {
 	assertAdminCount(t, s, 1)
 }
 
+// assertAdminCount นับ admin จากฐานข้อมูลจริงและเทียบกับจำนวนที่คาดหวัง
 func assertAdminCount(t *testing.T, s *Store, want int) {
 	t.Helper()
 	var count int

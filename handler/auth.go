@@ -1,3 +1,4 @@
+// ไฟล์ handler/auth.go: รับคำขอสมัคร/เข้าสู่ระบบ จัดการโปรไฟล์ รหัสผ่าน และสิทธิ์สมาชิกสำหรับ admin
 package handler
 
 import (
@@ -12,11 +13,13 @@ import (
 	"thaifood-backend/store"
 )
 
+// validEmail ตรวจรูปแบบอีเมลและความยาว โดยไม่ยอมรับชื่อแสดงผลที่พ่วงมากับอีเมล
 func validEmail(value string) bool {
 	address, err := mail.ParseAddress(value)
 	return err == nil && address.Address == value && len(value) <= 254 && strings.Contains(value, "@")
 }
 
+// Register ตรวจและปรับรูปแบบข้อมูล สร้าง password hash แล้วบันทึกสมาชิกใหม่ด้วยสิทธิ์ member
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email       string `json:"email"`
@@ -46,6 +49,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	write(w, 201, member)
 }
 
+// Login ตรวจอีเมลและรหัสผ่านก่อนออก JWT พร้อมข้อมูลสมาชิก โดยใช้ error เดียวกันเมื่อบัญชีหรือรหัสผ่านไม่ตรง
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Email    string `json:"email"`
@@ -65,7 +69,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		storeError(w, err)
 		return
 	}
-	// Compare a valid dummy hash when the email is absent to avoid a fast account-existence probe.
+	// แม้ไม่พบอีเมลก็เทียบกับ bcrypt hash ตัวอย่าง เพื่อลดความต่างของเวลาที่ใช้เดาว่าบัญชีมีอยู่หรือไม่
 	hash := member.PasswordHash
 	if errors.Is(err, store.ErrNotFound) {
 		hash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
@@ -83,10 +87,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, map[string]any{"token": token, "member": member})
 }
 
+// Me ส่งข้อมูลสมาชิกปัจจุบันที่ middleware โหลดไว้ใน context
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	member, _ := mw.Member(r.Context())
 	write(w, 200, member)
 }
+
+// UpdateMe อนุญาตให้แก้เฉพาะชื่อแสดงผลของสมาชิกที่เข้าสู่ระบบ
 func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		DisplayName string `json:"displayName"`
@@ -108,6 +115,8 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 200, updated)
 }
+
+// ChangePassword ตรวจรหัสผ่านเดิมและบันทึก hash ใหม่ โดยตรวจว่า hash เดิมยังไม่ถูกเปลี่ยนระหว่างทาง
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		CurrentPassword string `json:"currentPassword"`
@@ -137,6 +146,8 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 204, nil)
 }
+
+// ListMembers ส่งรายการสมาชิกให้ endpoint ที่ผ่านการตรวจสิทธิ์ admin แล้ว
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	list, err := h.Store.ListMembers(r.Context())
 	if err != nil {
@@ -146,13 +157,14 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	items(w, list)
 }
 
+// UpdateMemberRole รับเฉพาะ role แบบ member/admin และป้องกันการเปลี่ยนสิทธิ์บัญชีตนเองก่อนเรียก store
 func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 	targetID, err := id(r, "id")
 	if err != nil {
 		bad(w, err)
 		return
 	}
-	// A map also rejects differently cased keys, which struct decoding accepts.
+	// ใช้ map เพื่อบังคับชื่อ key เป็น role ตรงตัว เพราะการ decode เข้า struct ยอมรับชื่อที่ต่างตัวพิมพ์ได้
 	var in map[string]json.RawMessage
 	if err := body(w, r, &in); err != nil {
 		bad(w, err)

@@ -1,3 +1,4 @@
+// ไฟล์ integration/api_test.go: ทดสอบครบเส้นทาง HTTP → middleware → handler → PostgreSQL ด้วย server และ schema ชั่วคราว
 package integration
 
 import (
@@ -23,14 +24,17 @@ import (
 	"thaifood-backend/store"
 )
 
+// secret นี้ใช้เฉพาะ JWT ของ server ทดสอบที่สร้างภายใน process นี้
 const testSecret = "integration-only-secret-at-least-32-bytes"
 
+// api รวมตัวทดสอบ connection pool ของ schema ชั่วคราว และ HTTP server ที่เรียกใช้งานจริง
 type api struct {
 	t      *testing.T
 	pool   *pgxpool.Pool
 	server *httptest.Server
 }
 
+// newAPI เตรียม schema/seed แยก เปิด HTTP server สำหรับทดสอบ และล้างทรัพยากรเมื่อจบ; ข้ามเมื่อไม่มี TEST_DATABASE_URL
 func newAPI(t *testing.T) *api {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
@@ -74,6 +78,7 @@ func newAPI(t *testing.T) *api {
 	return &api{t: t, pool: pool, server: s}
 }
 
+// request ส่ง HTTP จริง ตรวจ status, JSON/error envelope และการไม่รั่ว password hash ก่อนคืนข้อมูลให้ test
 func (a *api) request(method, path, token string, body any, want int) map[string]any {
 	a.t.Helper()
 	var data []byte
@@ -129,6 +134,7 @@ func (a *api) request(method, path, token string, body any, want int) map[string
 	return out
 }
 
+// register สมัครสมาชิกและเข้าสู่ระบบเพื่อคืน ID กับ JWT สำหรับสถานการณ์ทดสอบถัดไป
 func (a *api) register(email string) (int64, string) {
 	a.t.Helper()
 	m := a.request("POST", "/api/auth/register", "", map[string]any{"email": email, "password": "ExamplePass123!", "displayName": "สมาชิกทดสอบ"}, 201)
@@ -143,6 +149,7 @@ func (a *api) register(email string) (int64, string) {
 	return int64(m["id"].(float64)), token
 }
 
+// TestAPIEndToEnd ตรวจข้อมูลสาธารณะ บัญชี ร้าน รีวิว ร้านโปรด สิทธิ์ คะแนนรวม และ cascade ผ่าน API จริง
 func TestAPIEndToEnd(t *testing.T) {
 	a := newAPI(t)
 	a.request("GET", "/health", "", nil, 200)
@@ -164,7 +171,7 @@ func TestAPIEndToEnd(t *testing.T) {
 			t.Fatal("unreviewed seed restaurant has a rating")
 		}
 	}
-	// The seed now exceeds the API's maximum page size: every row must remain reachable.
+	// ข้อมูลเริ่มต้นมีมากกว่าหนึ่งหน้า จึงต้องไล่หน้าตรวจว่าครบทุกร้านและไม่มี ID ซ้ำข้ามหน้า
 	seen := make(map[float64]bool)
 	covered := make(map[string]bool)
 	for page, want := range []int{50, 9} {
@@ -207,6 +214,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	for _, body := range []string{`{`, `[]`, `null`, `{} {}`, `{"email":"bad","password":"short","displayName":""}`} {
 		a.request("POST", "/api/auth/register", "", body, 400)
 	}
+	// สร้างสมาชิกหลายบทบาทเพื่อตรวจการเข้าสู่ระบบ ข้อมูลส่วนตัว และสิทธิ์ที่แยกจากกัน
 	id1, token1 := a.register("One@Example.com")
 	_, token2 := a.register("two@example.com")
 	adminID, adminToken := a.register("admin@example.com")
@@ -233,6 +241,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	if len(a.request("GET", "/api/admin/members", adminToken, nil, 200)["items"].([]any)) != 3 {
 		t.Fatal("admin member listing")
 	}
+	// ให้ admin สร้างร้านของ test เอง แล้วตรวจการแก้เฉพาะฟิลด์และการค้นหาชื่อไทย
 	province := provinces[0].(map[string]any)
 	category := categories[0].(map[string]any)
 	input := map[string]any{"name": "ร้านทดสอบ API", "provinceId": province["id"], "categoryId": category["id"], "address": "ที่อยู่ทดสอบ", "description": "ร้านที่สร้างโดย integration test", "latitude": 13.75, "longitude": 100.5, "imageUrl": nil}
@@ -255,6 +264,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	if a.request("GET", filter, "", nil, 200)["total"] != float64(1) {
 		t.Fatal("Thai name filters failed")
 	}
+	// ตรวจวงจรรีวิว ตั้งแต่ validation และ ownership จนถึงคะแนนเฉลี่ยที่เปลี่ยนตามรีวิวจริง
 	if len(a.request("GET", path+"/reviews", "", nil, 200)["items"].([]any)) != 0 {
 		t.Fatal("new restaurant reviews should be empty")
 	}
@@ -291,6 +301,7 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatal("no reviews must mean null rating")
 	}
 	a.request("DELETE", "/api/reviews/99999999", token1, nil, 404)
+	// ตรวจว่าร้านโปรดแยกตามสมาชิก และการลบร้านล้างรีวิว/รายการโปรดที่อ้างถึงได้ครบ
 	if len(a.request("GET", "/api/favorites", token1, nil, 200)["items"].([]any)) != 0 {
 		t.Fatal("new member favorites should be empty")
 	}
@@ -316,7 +327,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	if err := a.pool.QueryRow(context.Background(), `SELECT count(*) FROM reviews WHERE restaurant_id=$1`, rid).Scan(&count); err != nil || count != 0 {
 		t.Fatal("reviews not cascaded")
 	}
-	// Token created while member: promotion and demotion apply immediately.
+	// ใช้ token เดิมตรวจว่าการลดสิทธิ์มีผลทันที และ token ผิดรูปแบบ/หมดอายุยังถูกปฏิเสธ
 	if _, err := a.pool.Exec(context.Background(), `UPDATE members SET role='member' WHERE id=$1`, adminID); err != nil {
 		t.Fatal(err)
 	}
@@ -327,6 +338,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	t.Log("Verified all 20 Contract v2 endpoints + health, PostgreSQL persistence, role/ownership checks, validation, uniqueness and cascades")
 }
 
+// urlQuery แปลงแต่ละไบต์ของข้อความเป็น query encoding เพื่อส่งชื่อไทยและอักขระพิเศษได้ครบ
 func urlQuery(s string) string { // keep UTF-8 names intact while encoding query separators.
 	var b strings.Builder
 	for _, c := range []byte(s) {
@@ -339,6 +351,7 @@ func urlQuery(s string) string { // keep UTF-8 names intact while encoding query
 	return b.String()
 }
 
+// expiredToken สร้าง JWT ที่ลายเซ็นถูกต้องแต่หมดอายุ เพื่อทดสอบการปฏิเสธที่ middleware
 func expiredToken(t *testing.T) string {
 	t.Helper()
 	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{Issuer: "thaifood-guide", Audience: jwt.ClaimStrings{"thaifood-api"}, Subject: "1", IssuedAt: jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)), ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Hour))}).SignedString([]byte(testSecret))
@@ -348,6 +361,7 @@ func expiredToken(t *testing.T) string {
 	return s
 }
 
+// wrongAlgorithmToken สร้าง JWT แบบ HS384 เพื่อยืนยันว่าระบบรับเฉพาะ HS256
 func wrongAlgorithmToken(t *testing.T) string {
 	t.Helper()
 	s, err := jwt.NewWithClaims(jwt.SigningMethodHS384, jwt.RegisteredClaims{Issuer: "thaifood-guide", Audience: jwt.ClaimStrings{"thaifood-api"}, Subject: "1", IssuedAt: jwt.NewNumericDate(time.Now()), ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))}).SignedString([]byte(testSecret))
@@ -357,6 +371,7 @@ func wrongAlgorithmToken(t *testing.T) string {
 	return s
 }
 
+// TestConcurrentDuplicates ส่งคำขอเพิ่มรีวิว/ร้านโปรดซ้ำพร้อมกัน และตรวจว่ามี 201 หนึ่งครั้งกับ 409 ที่เหลือ
 func TestConcurrentDuplicates(t *testing.T) {
 	a := newAPI(t)
 	_, token := a.register("concurrent@example.com")

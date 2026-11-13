@@ -1,6 +1,9 @@
+# ไฟล์นี้ตัดข้อมูลที่ไม่จำเป็นออกจาก Docker build context เพื่อลดขนาดและไม่คัดลอกข้อมูลลับ
+# ไม่ส่งประวัติ Git หรือไฟล์ environment จริงเข้า image
 .git
 .env
 .env.*
+# ไม่ส่ง binary, รายงานทดสอบ และไฟล์เครื่องมือภายใน; Docker จะ build โปรแกรมใหม่เอง
 bin
 coverage.out
 .superpowers

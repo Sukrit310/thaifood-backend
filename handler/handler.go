@@ -1,3 +1,4 @@
+// ไฟล์ handler/handler.go: รวมเส้นทาง API และตัวช่วยสำหรับ JSON, validation และการแปลงข้อผิดพลาดเป็น HTTP
 package handler
 
 import (
@@ -16,11 +17,13 @@ import (
 	"thaifood-backend/store"
 )
 
+// Handler รับ dependency สำหรับเข้าถึงข้อมูลและออก/ตรวจ token โดยใช้ repository จำลองใน test ได้
 type Handler struct {
 	Store   store.Repository
 	Tickets *auth.Issuer
 }
 
+// Routes ลงทะเบียน endpoint แยกตาม method และครอบการตรวจ login/admin ตามสิทธิ์ที่ต้องใช้
 func (h *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	routes := map[string]map[string]http.HandlerFunc{}
@@ -30,6 +33,7 @@ func (h *Handler) Routes() http.Handler {
 		}
 		routes[path][method] = f
 	}
+	// ประกอบ middleware ให้ตรวจ login ก่อน role เสมอ เพื่อให้สิทธิ์มาจากสมาชิกที่ยืนยันตัวตนแล้ว
 	login := func(f http.HandlerFunc) http.HandlerFunc { return mw.RequireLogin(h.Tickets, h.Store, f) }
 	admin := func(f http.HandlerFunc) http.HandlerFunc { return login(mw.RequireRole("admin", f)) }
 	add("GET", "/health", h.Health)
@@ -55,6 +59,7 @@ func (h *Handler) Routes() http.Handler {
 	add("DELETE", "/api/admin/restaurants/{id}", admin(h.DeleteRestaurant))
 	add("DELETE", "/api/admin/reviews/{id}", admin(h.DeleteReview))
 	for path, methods := range routes {
+		// แยก path ที่ไม่มีอยู่ (404) ออกจาก method ที่ path นั้นไม่รองรับ (405 พร้อม Allow header)
 		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			if f, ok := methods[r.Method]; ok {
 				f(w, r)
@@ -74,6 +79,7 @@ func (h *Handler) Routes() http.Handler {
 	return mux
 }
 
+// write ส่ง JSON พร้อม status ที่กำหนด และเว้น body เมื่อไม่มีข้อมูล เช่น response 204
 func write(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -82,10 +88,16 @@ func write(w http.ResponseWriter, status int, value any) {
 		_ = json.NewEncoder(w).Encode(value)
 	}
 }
+
+// fail ห่อรหัสและข้อความผิดพลาดในโครงสร้าง error ตาม API contract
 func fail(w http.ResponseWriter, status int, code, message string) {
 	write(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
 }
+
+// bad ส่งข้อผิดพลาดจาก validation เป็น HTTP 400
 func bad(w http.ResponseWriter, err error) { fail(w, 400, "VALIDATION_ERROR", err.Error()) }
+
+// storeError แปลง error ของฐานข้อมูลเป็นสถานะ API และซ่อนรายละเอียดภายในของ error ที่ไม่รู้จัก
 func storeError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrNotFound):
@@ -102,6 +114,8 @@ func storeError(w http.ResponseWriter, err error) {
 		fail(w, 500, "INTERNAL_ERROR", "Unable to complete the request")
 	}
 }
+
+// items ส่งรายการในฟิลด์ items โดยแปลง slice ที่เป็น nil ให้เป็น JSON array ว่าง
 func items[T any](w http.ResponseWriter, list []T) {
 	if list == nil {
 		list = []T{}
@@ -109,6 +123,7 @@ func items[T any](w http.ResponseWriter, list []T) {
 	write(w, 200, map[string]any{"items": list})
 }
 
+// body อ่าน JSON object เดียวไม่เกิน 1 MiB และปฏิเสธ UTF-8 ผิดรูปแบบหรือฟิลด์ที่ไม่รู้จัก
 func body(w http.ResponseWriter, r *http.Request, dst any) error {
 	if value := r.Header.Get("Content-Type"); value != "" {
 		media, _, err := mime.ParseMediaType(value)
@@ -124,6 +139,7 @@ func body(w http.ResponseWriter, r *http.Request, dst any) error {
 	if len(raw) == 0 || raw[0] != '{' || !utf8.Valid(raw) {
 		return errors.New("Request body must be a JSON object")
 	}
+	// ไม่รับฟิลด์เกินจากโครงสร้างปลายทาง และต้องไม่มี JSON ก้อนที่สองต่อท้าย
 	d := json.NewDecoder(strings.NewReader(string(raw)))
 	d.DisallowUnknownFields()
 	if err = d.Decode(dst); err != nil {
@@ -135,6 +151,7 @@ func body(w http.ResponseWriter, r *http.Request, dst any) error {
 	return nil
 }
 
+// id แปลง path parameter เป็นจำนวนเต็มบวกขนาด int64
 func id(r *http.Request, key string) (int64, error) {
 	n, err := strconv.ParseInt(r.PathValue(key), 10, 64)
 	if err != nil || n <= 0 {
@@ -142,11 +159,17 @@ func id(r *http.Request, key string) (int64, error) {
 	}
 	return n, nil
 }
+
+// boundedText ตรวจ UTF-8 ความยาวตามจำนวน Unicode code points และการไม่มีอักขระ NUL
 func boundedText(value string, min, max int) bool {
 	n := utf8.RuneCountInString(value)
 	return utf8.ValidString(value) && n >= min && n <= max && !strings.ContainsRune(value, '\x00')
 }
+
+// passwordValid ตรวจความยาวรหัสผ่านเป็นไบต์ให้ตรงขีดจำกัด 8–72 ไบต์ของระบบ
 func passwordValid(value string) bool { return len(value) >= 8 && len(value) <= 72 }
+
+// requiredText ตรวจฟิลด์ข้อความบังคับ ตัดช่องว่างหัวท้าย และจำกัดจำนวนตัวอักษร
 func requiredText(value *string, name string, max int) error {
 	if value == nil {
 		return fmt.Errorf("%s is required", name)
@@ -158,6 +181,7 @@ func requiredText(value *string, name string, max int) error {
 	return nil
 }
 
+// Health ตรวจการเชื่อมต่อฐานข้อมูลจริงและตอบ 503 เมื่อฐานข้อมูลไม่พร้อมใช้งาน
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if err := h.Store.Ping(r.Context()); err != nil {
 		fail(w, 503, "UNAVAILABLE", "Database is unavailable")

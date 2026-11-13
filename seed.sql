@@ -1,8 +1,9 @@
--- Idempotent reference data and 59 real restaurants.
--- Sources and individual photo licenses: docs/RESTAURANT_DATA_SOURCES.md
--- Retrieved 2026-11-12. Ratings are calculated only from this site's reviews.
+-- ไฟล์นี้เติมข้อมูลอ้างอิงและร้านจริง 59 ร้าน โดยรันซ้ำไม่เพิ่มรายการเดิมหรือทับข้อมูลร้านที่แก้แล้ว
+-- แหล่งข้อมูล/ใบอนุญาตภาพรายร้าน: docs/RESTAURANT_DATA_SOURCES.md
+-- ข้อมูลชุดแรกสืบค้นเมื่อ 2026-11-12; คะแนนร้านคำนวณจากรีวิวในเว็บเท่านั้น
 BEGIN;
 
+-- เติมครบ 77 จังหวัดพร้อมภูมิภาค โดยคงจังหวัดที่มีชื่ออยู่แล้ว
 INSERT INTO provinces(name_th,region) VALUES
 ('กรุงเทพมหานคร','ภาคกลาง'),
 ('กำแพงเพชร','ภาคกลาง'),
@@ -83,14 +84,14 @@ INSERT INTO provinces(name_th,region) VALUES
 ('สุราษฎร์ธานี','ภาคใต้')
 ON CONFLICT(name_th) DO NOTHING;
 
+-- เติมประเภทอาหาร 7 ประเภท โดยไม่สร้างชื่อเดิมซ้ำ
 INSERT INTO categories(name_th) VALUES
 ('อาหารเหนือ'),('อาหารอีสาน'),('อาหารใต้'),('อาหารไทย'),('คาเฟ่'),('อาหารทะเล'),('อาหารมังสวิรัติ')
 ON CONFLICT(name_th) DO NOTHING;
 
--- Retire only the old, explicitly identified fictional seed rows. Protect
--- child writes while checking references, so a concurrent review/favorite
--- cannot be cascaded away between NOT EXISTS and DELETE. Real/admin rows
--- and fictional rows edited by an admin or referenced by a member are preserved.
+-- ลบเฉพาะร้านสมมติชุดเก่าที่ระบุ source ชัดเจน ยังไม่ถูกแก้ไข และไม่มีรีวิว/รายการโปรดอ้างถึง
+-- ล็อกตารางลูกระหว่างตรวจและลบ เพื่อไม่ให้การเขียนพร้อมกันทำให้ข้อมูลสมาชิกถูก cascade ทิ้ง
+-- จำกัดเวลารอ lock ที่ 5 วินาที; เก็บร้านจริง ร้านที่ admin เพิ่ม/แก้ และร้านที่สมาชิกใช้งานแล้ว
 SET LOCAL lock_timeout = '5s';
 LOCK TABLE reviews, favorites IN SHARE MODE;
 DELETE FROM restaurants r
@@ -100,6 +101,7 @@ WHERE r.source_name = 'ThaiFood Guide author-created fictional sample'
   AND NOT EXISTS (SELECT 1 FROM reviews v WHERE v.restaurant_id = r.id)
   AND NOT EXISTS (SELECT 1 FROM favorites f WHERE f.restaurant_id = r.id);
 
+-- ชุดร้านจริงเริ่มต้น 20 ร้าน: description เก็บเครดิตข้อมูล/ภาพ และ NULL คือพิกัดที่แหล่งข้อมูลไม่ได้ระบุ
 WITH real_places(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
     ('เฮือนม่วนใจ๋',
      'เชียงใหม่',
@@ -387,11 +389,11 @@ SELECT s.name,p.id,c.id,s.address,s.description,s.latitude::double precision,s.l
 FROM real_places s
 JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
--- Stable source IDs prevent duplicates and preserve later administrator edits.
+-- แปลงชื่อจังหวัด/ประเภทเป็น ID ผ่าน JOIN; คู่ source เดิมให้ข้าม เพื่อคงข้อมูลที่ admin แก้ไว้
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
 
--- Additional real places: ten previously empty provinces (2026-11-12).
--- INSERT-only: existing restaurants, reviews and favorites are preserved.
+-- เพิ่มร้านจริงใน 10 จังหวัดที่ยังไม่มีร้าน (2026-11-12)
+-- เพิ่มอย่างเดียวโดย JOIN ชื่อจังหวัด/ประเภทเป็น ID และข้าม source ที่ซ้ำ ไม่แก้รีวิวหรือรายการโปรด
 WITH additional_places(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
     ('รำพึง',
      'สิงห์บุรี',
@@ -541,8 +543,8 @@ JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
 
--- Additional real places: 23 previously empty provinces (2026-11-13).
--- INSERT-only: existing restaurants, reviews and favorites are preserved.
+-- เพิ่มร้านจริงอีก 23 จังหวัดที่ยังไม่มีร้าน (2026-11-13)
+-- ใช้รูปแบบ INSERT-only เช่นเดียวกับชุดก่อน เพื่อคงข้อมูลเดิมและให้รันซ้ำได้
 WITH additional_places_23(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
     ('จันทรโภชนา สาขาเบญจมราชูทิศ',
      'จันทบุรี',
@@ -874,8 +876,8 @@ JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
 
--- Six additional real places in existing provinces (2026-11-13).
--- INSERT-only: existing restaurants, reviews and favorites are preserved.
+-- เพิ่มร้านจริงอีก 6 ร้านในจังหวัดที่มีร้านอยู่แล้ว (2026-11-13)
+-- เพิ่มเฉพาะ source ใหม่ โดยเก็บร้านเดิม รีวิว และรายการโปรดไว้
 WITH additional_existing_places(name,province_name,category_name,address,description,latitude,longitude,image_url,source_name,source_url) AS (VALUES
     ('Anchan Vegetarian Restaurant',
      'เชียงใหม่',
@@ -969,4 +971,5 @@ JOIN provinces p ON p.name_th=s.province_name
 JOIN categories c ON c.name_th=s.category_name
 ON CONFLICT(source_name,source_url) WHERE source_name IS NOT NULL AND source_url IS NOT NULL DO NOTHING;
 
+-- ยืนยันการเติมข้อมูลทุกชุดพร้อมกันเมื่อ transaction ทั้งหมดสำเร็จ
 COMMIT;

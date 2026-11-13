@@ -3,7 +3,7 @@
     "_postman_id": "1d820b10-b73e-4594-8ef5-5d68ce54df8d",
     "name": "ThaiFood Guide API Contract v2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control. The allowEdgeSqlProbeBlock environment option defaults to false. Opt in only for Render-hosted verification to classify SQL-injection probe 64 as blocked by the positively identified upstream Cloudflare WAF; all application responses remain strict Contract checks. See postman/README.md. Requests 65–78 cover admin role management using only the generated member; request 75 restores its member role. If the run is interrupted after promotion, use the admin account to demote that test member."
+    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control. The allowEdgeSqlProbeBlock environment option defaults to false. Opt in only for Render-hosted verification to classify SQL-injection probe 64 as blocked by the positively identified upstream Cloudflare WAF; all application responses remain strict Contract checks. See postman/README.md. Requests 65–78 cover admin role management using only the generated member; request 75 restores its member role. If the run is interrupted after promotion, use the admin account to demote that test member.\n\nคำอธิบายภาษาไทย: ชุดนี้ทดสอบ API ตามลำดับ ตั้งค่าบัญชี admin ใน environment ส่วนตัวก่อนรัน แล้วสร้างสมาชิกและร้านของรอบทดสอบเอง คำขอ 65–78 ตรวจการเปลี่ยนสิทธิ์ และคำขอ 75 คืนสมาชิกทดสอบเป็น member ดูคำอธิบายรายคำขอใน request.description และคอมเมนต์ใน scripts"
   },
   "event": [
     {
@@ -11,6 +11,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
+          "// ก่อนคำขอแรก: สร้างข้อมูลเฉพาะรอบทดสอบและล้าง ID/token เก่า เพื่อให้แต่ละรอบไม่ใช้ข้อมูลปะปนกัน",
           "if (pm.info.requestName === \"01 Health\") {",
           "  const run = pm.variables.replaceIn(\"{{$guid}}\");",
           "  pm.environment.set(\"runId\", run);",
@@ -31,7 +32,9 @@
       "script": {
         "type": "text/javascript",
         "exec": [
+          "// หลังทุก response: ตรวจ JSON, error envelope และข้อมูลลับ; 204 ต้องไม่มี body",
           "pm.variables.set(\"__edgeSqlProbeBlocked\", false);",
+          "// ข้อยกเว้นนี้ใช้เฉพาะ SQL probe หมายเลข 64 ที่ยืนยันว่า WAF ของ Render บล็อก และผู้ทดสอบเปิดตัวเลือกไว้",
           "const edgeSqlProbeBlocked = pm.environment.get(\"allowEdgeSqlProbeBlock\") === \"true\"",
           "  && /^https:\\/\\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.onrender\\.com\\/?$/i.test(pm.variables.replaceIn(\"{{baseUrl}}\"))",
           "  && pm.info.requestName === \"64 SQL metacharacters remain data\"",
@@ -57,6 +60,7 @@
           "  pm.test(\"Valid JSON response\", function () { data = pm.response.json(); pm.expect(data).to.be.an(\"object\"); });",
           "  if (data) {",
           "    pm.test(\"No password/hash/secret fields exposed\", function () {",
+          "      // ไล่อ่าน object/array ทุกระดับ เพื่อไม่ให้มีฟิลด์ password, hash หรือ secret หลุดในข้อมูลซ้อน",
           "      function visit(v) {",
           "        if (Array.isArray(v)) { v.forEach(visit); }",
           "        else if (v && typeof v === \"object\") { Object.keys(v).forEach(function(k){ pm.expect(k).not.to.match(/password|hash|secret/i); visit(v[k]); }); }",
@@ -85,7 +89,8 @@
         "url": "{{baseUrl}}/health",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจ health ของ API และการเชื่อมต่อฐานข้อมูล"
       },
       "event": [
         {
@@ -93,6 +98,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจ health ของ API และการเชื่อมต่อฐานข้อมูล",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Database connected\", function () { pm.expect(pm.response.json().status).to.eql(\"ok\"); });"
             ]
@@ -108,7 +114,8 @@
         "url": "{{baseUrl}}/api/provinces",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่ารายการจังหวัดมีครบ 77 จังหวัด และเก็บจังหวัดตัวอย่างสำหรับสร้างร้าน"
       },
       "event": [
         {
@@ -116,6 +123,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารายการจังหวัดมีครบ 77 จังหวัด และเก็บจังหวัดตัวอย่างสำหรับสร้างร้าน",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"All provinces are available\", function () { pm.expect(pm.response.json().items).to.have.lengthOf(77); });",
               "if (pm.response.code < 300) { pm.environment.set(\"provinceId\", pm.response.json().items.find(function(p){return p.nameTh === \"เชียงใหม่\";}).id); }",
@@ -133,7 +141,8 @@
         "url": "{{baseUrl}}/api/categories",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "อ่านประเภทอาหารและเก็บประเภทตัวอย่างสำหรับสร้างร้านทดสอบ"
       },
       "event": [
         {
@@ -141,6 +150,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: อ่านประเภทอาหารและเก็บประเภทตัวอย่างสำหรับสร้างร้านทดสอบ",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Category list\", function () { pm.expect(pm.response.json().items.length).to.be.above(0); });",
               "if (pm.response.code < 300) { pm.environment.set(\"categoryId\", pm.response.json().items[0].id); }",
@@ -158,7 +168,8 @@
         "url": "{{baseUrl}}/api/restaurants",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า guest ดูร้านพร้อมข้อมูลการแบ่งหน้าได้"
       },
       "event": [
         {
@@ -166,6 +177,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า guest ดูร้านพร้อมข้อมูลการแบ่งหน้าได้",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Pagination defaults\", function () { const j=pm.response.json(); pm.expect(j.page).to.eql(1); pm.expect(j.limit).to.eql(12); pm.expect(j.total).to.be.a(\"number\"); pm.expect(j.items).to.be.an(\"array\"); });"
             ]
@@ -181,7 +193,8 @@
         "url": "{{baseUrl}}/api/restaurants?q={{runId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าคำค้นที่ไม่ตรงกับร้านใดส่ง items ว่างและ total เป็นศูนย์"
       },
       "event": [
         {
@@ -189,6 +202,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าคำค้นที่ไม่ตรงกับร้านใดส่ง items ว่างและ total เป็นศูนย์",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Empty items array\", function () { pm.expect(pm.response.json().items).to.eql([]); });",
               "pm.test(\"Empty total\", function () { pm.expect(pm.response.json().total).to.eql(0); });"
@@ -205,7 +219,8 @@
         "url": "{{baseUrl}}/api/restaurants?page=0",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า page=0 ถูกปฏิเสธด้วย validation error"
       },
       "event": [
         {
@@ -213,6 +228,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า page=0 ถูกปฏิเสธด้วย validation error",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -227,7 +243,8 @@
         "url": "{{baseUrl}}/api/restaurants/9223372036854775807",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่ารหัสร้านที่ไม่มีอยู่ตอบ 404"
       },
       "event": [
         {
@@ -235,6 +252,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารหัสร้านที่ไม่มีอยู่ตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -249,7 +267,8 @@
         "url": "{{baseUrl}}/api/me",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าผู้ที่ไม่ส่ง JWT เข้าโปรไฟล์ไม่ได้"
       },
       "event": [
         {
@@ -257,6 +276,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าผู้ที่ไม่ส่ง JWT เข้าโปรไฟล์ไม่ได้",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -276,7 +296,8 @@
         "url": "{{baseUrl}}/api/me",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าระบบปฏิเสธ token ปลอม"
       },
       "event": [
         {
@@ -284,6 +305,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าระบบปฏิเสธ token ปลอม",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -312,7 +334,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "สมัครสมาชิกที่สร้างเฉพาะรอบทดสอบและเก็บ memberId สำหรับคำขอถัดไป"
       },
       "event": [
         {
@@ -320,6 +343,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: สมัครสมาชิกที่สร้างเฉพาะรอบทดสอบและเก็บ memberId สำหรับคำขอถัดไป",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"memberId\", pm.response.json().id); }",
               "pm.test(\"Register returns only Member fields\", function () { pm.expect(Object.keys(pm.response.json()).sort()).to.eql([\"displayName\",\"email\",\"id\",\"role\"]); pm.expect(pm.response.json().role).to.eql(\"member\"); });"
@@ -350,7 +374,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าอีเมลเดิมที่เปลี่ยนตัวพิมพ์เล็กใหญ่ยังถือว่าซ้ำ"
       },
       "event": [
         {
@@ -358,6 +383,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าอีเมลเดิมที่เปลี่ยนตัวพิมพ์เล็กใหญ่ยังถือว่าซ้ำ",
               "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });"
             ]
           }
@@ -386,7 +412,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการสมัครสมาชิกไม่สามารถกำหนด role เป็น admin เองได้"
       },
       "event": [
         {
@@ -394,6 +421,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการสมัครสมาชิกไม่สามารถกำหนด role เป็น admin เองได้",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -422,7 +450,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเข้าสู่ระบบด้วยรหัสผ่านผิดถูกปฏิเสธ"
       },
       "event": [
         {
@@ -430,6 +459,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเข้าสู่ระบบด้วยรหัสผ่านผิดถูกปฏิเสธ",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -458,7 +488,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เข้าสู่ระบบสมาชิกทดสอบและเก็บ memberToken สำหรับ endpoint ที่ต้อง login"
       },
       "event": [
         {
@@ -466,6 +497,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เข้าสู่ระบบสมาชิกทดสอบและเก็บ memberToken สำหรับ endpoint ที่ต้อง login",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "if (pm.response.code < 300) { pm.environment.set(\"memberToken\", pm.response.json().token); }",
               "pm.test(\"Member login role\", function () { pm.expect(pm.response.json().member.role).to.eql(\"member\"); });"
@@ -487,7 +519,8 @@
         "url": "{{baseUrl}}/api/me",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "อ่านโปรไฟล์ของสมาชิกที่เป็นเจ้าของ JWT"
       },
       "event": [
         {
@@ -495,6 +528,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: อ่านโปรไฟล์ของสมาชิกที่เป็นเจ้าของ JWT",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Correct member\", function () { pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get(\"memberId\"))); });"
             ]
@@ -528,7 +562,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เปลี่ยนชื่อแสดงผลของสมาชิกที่เข้าสู่ระบบ"
       },
       "event": [
         {
@@ -536,6 +571,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เปลี่ยนชื่อแสดงผลของสมาชิกที่เข้าสู่ระบบ",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Updated display name\", function () { pm.expect(pm.response.json().displayName).to.eql(\"สมาชิกทดสอบ Postman\"); });"
             ]
@@ -569,7 +605,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเปลี่ยนรหัสผ่านต้องยืนยันรหัสผ่านเดิมให้ถูกต้อง"
       },
       "event": [
         {
@@ -577,6 +614,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเปลี่ยนรหัสผ่านต้องยืนยันรหัสผ่านเดิมให้ถูกต้อง",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -609,7 +647,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เปลี่ยนรหัสผ่านของสมาชิกทดสอบเป็น newPassword"
       },
       "event": [
         {
@@ -617,6 +656,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เปลี่ยนรหัสผ่านของสมาชิกทดสอบเป็น newPassword",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -645,7 +685,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่ารหัสผ่านเก่าใช้เข้าสู่ระบบไม่ได้หลังเปลี่ยนแล้ว"
       },
       "event": [
         {
@@ -653,6 +694,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารหัสผ่านเก่าใช้เข้าสู่ระบบไม่ได้หลังเปลี่ยนแล้ว",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -681,7 +723,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เข้าสู่ระบบด้วยรหัสผ่านใหม่และปรับ memberToken สำหรับคำขอถัดไป"
       },
       "event": [
         {
@@ -689,6 +732,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เข้าสู่ระบบด้วยรหัสผ่านใหม่และปรับ memberToken สำหรับคำขอถัดไป",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "if (pm.response.code < 300) { pm.environment.set(\"memberToken\", pm.response.json().token); }"
             ]
@@ -709,7 +753,8 @@
         "url": "{{baseUrl}}/api/admin/members",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า member ไม่มีสิทธิ์อ่านรายชื่อสมาชิกผ่าน endpoint ของ admin"
       },
       "event": [
         {
@@ -717,6 +762,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า member ไม่มีสิทธิ์อ่านรายชื่อสมาชิกผ่าน endpoint ของ admin",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -745,7 +791,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "สมัครสมาชิกคนที่สองเพื่อทดสอบการแยกข้อมูลและสิทธิ์เจ้าของ"
       },
       "event": [
         {
@@ -753,6 +800,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: สมัครสมาชิกคนที่สองเพื่อทดสอบการแยกข้อมูลและสิทธิ์เจ้าของ",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });"
             ]
           }
@@ -781,7 +829,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เข้าสู่ระบบคนที่สองและเก็บ otherToken"
       },
       "event": [
         {
@@ -789,6 +838,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เข้าสู่ระบบคนที่สองและเก็บ otherToken",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "if (pm.response.code < 300) { pm.environment.set(\"otherToken\", pm.response.json().token); }"
             ]
@@ -818,7 +868,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เข้าสู่ระบบด้วยบัญชี admin ที่ตั้งไว้ และเก็บ adminToken/adminId"
       },
       "event": [
         {
@@ -826,6 +877,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// เตรียมคำขอ: เข้าสู่ระบบด้วยบัญชี admin ที่ตั้งไว้ และเก็บ adminToken/adminId",
               "if (!pm.environment.get(\"adminEmail\") || !pm.environment.get(\"adminPassword\")) { throw new Error(\"Set adminEmail and adminPassword for an account promoted with go run . admin EMAIL\"); }"
             ]
           }
@@ -835,6 +887,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เข้าสู่ระบบด้วยบัญชี admin ที่ตั้งไว้ และเก็บ adminToken/adminId",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "if (pm.response.code < 300) { pm.environment.set(\"adminToken\", pm.response.json().token); }",
               "pm.test(\"Trusted admin role\", function () { pm.expect(pm.response.json().member.role).to.eql(\"admin\"); });",
@@ -857,7 +910,8 @@
         "url": "{{baseUrl}}/api/admin/members",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า admin ดูรายชื่อสมาชิกได้โดยไม่พบข้อมูลรหัสผ่านใน response"
       },
       "event": [
         {
@@ -865,6 +919,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า admin ดูรายชื่อสมาชิกได้โดยไม่พบข้อมูลรหัสผ่านใน response",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Members list\", function () { pm.expect(pm.response.json().items).to.be.an(\"array\"); });"
             ]
@@ -898,7 +953,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ให้ admin สร้างร้านของรอบทดสอบและเก็บ restaurantId/ownedRestaurantId เพื่อใช้แก้ไขและลบภายหลัง"
       },
       "event": [
         {
@@ -906,6 +962,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin สร้างร้านของรอบทดสอบและเก็บ restaurantId/ownedRestaurantId เพื่อใช้แก้ไขและลบภายหลัง",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"restaurantId\", pm.response.json().id); }",
               "if (pm.response.code < 300) { pm.environment.set(\"ownedRestaurantId\", pm.response.json().id); }",
@@ -923,7 +980,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า guest อ่านรายละเอียดร้านที่เพิ่งสร้างได้"
       },
       "event": [
         {
@@ -931,6 +989,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า guest อ่านรายละเอียดร้านที่เพิ่งสร้างได้",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Restaurant fields match contract\", function () { pm.expect(pm.response.json()).to.have.all.keys(\"id\",\"name\",\"province\",\"category\",\"address\",\"description\",\"latitude\",\"longitude\",\"imageUrl\",\"rating\",\"reviewCount\"); });"
             ]
@@ -946,7 +1005,8 @@
         "url": "{{baseUrl}}/api/restaurants?province={{provinceName}}&category={{categoryName}}&q={{restaurantName}}&page=1&limit=50",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจการกรองชื่อจังหวัด ประเภทอาหาร และคำค้นร่วมกัน โดยรองรับชื่อภาษาไทย"
       },
       "event": [
         {
@@ -954,6 +1014,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจการกรองชื่อจังหวัด ประเภทอาหาร และคำค้นร่วมกัน โดยรองรับชื่อภาษาไทย",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Find only run owned restaurant\", function () { const j=pm.response.json(); pm.expect(j.total).to.eql(1); pm.expect(j.items[0].id).to.eql(Number(pm.environment.get(\"restaurantId\"))); });"
             ]
@@ -987,7 +1048,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ให้ admin แก้บางฟิลด์ของร้านและตรวจว่าฟิลด์ที่ไม่ได้ส่งยังคงเดิม"
       },
       "event": [
         {
@@ -995,6 +1057,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin แก้บางฟิลด์ของร้านและตรวจว่าฟิลด์ที่ไม่ได้ส่งยังคงเดิม",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Other fields preserved\", function () { const j=pm.response.json(); pm.expect(j.name).to.eql(pm.environment.get(\"restaurantName\")+\" updated\"); pm.expect(j.address).to.eql(\"ที่อยู่ร้านสมมติสำหรับทดสอบ\"); pm.expect(j.imageUrl).to.eql(null); });"
             ]
@@ -1028,7 +1091,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าพิกัดอยู่นอกช่วงที่กำหนดถูกปฏิเสธ"
       },
       "event": [
         {
@@ -1036,6 +1100,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าพิกัดอยู่นอกช่วงที่กำหนดถูกปฏิเสธ",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -1068,7 +1133,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าประเภทอาหารที่ไม่มีอยู่จริงถูกปฏิเสธด้วย error อ้างอิงข้อมูล"
       },
       "event": [
         {
@@ -1076,6 +1142,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าประเภทอาหารที่ไม่มีอยู่จริงถูกปฏิเสธด้วย error อ้างอิงข้อมูล",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -1090,7 +1157,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}/reviews",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าร้านใหม่ยังไม่มีรีวิวและส่ง items ว่าง"
       },
       "event": [
         {
@@ -1098,6 +1166,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าร้านใหม่ยังไม่มีรีวิวและส่ง items ว่าง",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Empty items array\", function () { pm.expect(pm.response.json().items).to.eql([]); });"
             ]
@@ -1127,7 +1196,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่า guest สร้างรีวิวไม่ได้"
       },
       "event": [
         {
@@ -1135,6 +1205,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า guest สร้างรีวิวไม่ได้",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -1167,7 +1238,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจคะแนนและความยาวข้อความรีวิวที่ไม่ผ่านเงื่อนไข"
       },
       "event": [
         {
@@ -1175,6 +1247,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจคะแนนและความยาวข้อความรีวิวที่ไม่ผ่านเงื่อนไข",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -1207,7 +1280,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเพิ่มรีวิวให้ร้านที่ไม่มีอยู่ตอบ 404"
       },
       "event": [
         {
@@ -1215,6 +1289,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเพิ่มรีวิวให้ร้านที่ไม่มีอยู่ตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -1247,7 +1322,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ให้สมาชิกสร้างรีวิวและเก็บ reviewId สำหรับตรวจ ownership และลบภายหลัง"
       },
       "event": [
         {
@@ -1255,6 +1331,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้สมาชิกสร้างรีวิวและเก็บ reviewId สำหรับตรวจ ownership และลบภายหลัง",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"reviewId\", pm.response.json().id); }",
               "pm.test(\"Review member projection\", function () { const j=pm.response.json(); pm.expect(j.member).to.have.all.keys(\"id\",\"displayName\"); pm.expect(j.rating).to.eql(5); });"
@@ -1289,7 +1366,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าหนึ่งสมาชิกเขียนรีวิวร้านเดิมซ้ำไม่ได้"
       },
       "event": [
         {
@@ -1297,6 +1375,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าหนึ่งสมาชิกเขียนรีวิวร้านเดิมซ้ำไม่ได้",
               "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });"
             ]
           }
@@ -1316,7 +1395,8 @@
         "url": "{{baseUrl}}/api/reviews/{{reviewId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าสมาชิกคนอื่นลบรีวิวที่ตนไม่ได้เป็นเจ้าของไม่ได้"
       },
       "event": [
         {
@@ -1324,6 +1404,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าสมาชิกคนอื่นลบรีวิวที่ตนไม่ได้เป็นเจ้าของไม่ได้",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -1338,7 +1419,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}/reviews",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า guest อ่านรีวิวพร้อมข้อมูลผู้เขียนได้"
       },
       "event": [
         {
@@ -1346,6 +1428,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า guest อ่านรีวิวพร้อมข้อมูลผู้เขียนได้",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Review appears\", function () { pm.expect(pm.response.json().items[0].id).to.eql(Number(pm.environment.get(\"reviewId\"))); });"
             ]
@@ -1361,7 +1444,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าคะแนนเฉลี่ยและจำนวนรีวิวของร้านมาจากรีวิวที่สร้างจริง"
       },
       "event": [
         {
@@ -1369,6 +1453,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าคะแนนเฉลี่ยและจำนวนรีวิวของร้านมาจากรีวิวที่สร้างจริง",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Review average and count\", function () { const j=pm.response.json(); pm.expect(j.rating).to.eql(5); pm.expect(j.reviewCount).to.eql(1); });"
             ]
@@ -1402,7 +1487,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เพิ่มร้านทดสอบในรายการโปรดของสมาชิก"
       },
       "event": [
         {
@@ -1410,6 +1496,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เพิ่มร้านทดสอบในรายการโปรดของสมาชิก",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "pm.test(\"Favorite response\", function () { pm.expect(pm.response.json().restaurantId).to.eql(Number(pm.environment.get(\"restaurantId\"))); });"
             ]
@@ -1443,7 +1530,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเพิ่มร้านเดิมซ้ำในรายการโปรดตอบ conflict"
       },
       "event": [
         {
@@ -1451,6 +1539,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเพิ่มร้านเดิมซ้ำในรายการโปรดตอบ conflict",
               "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });"
             ]
           }
@@ -1470,7 +1559,8 @@
         "url": "{{baseUrl}}/api/favorites",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าสมาชิกอ่านร้านที่ตนบันทึกเป็นรายการโปรดได้"
       },
       "event": [
         {
@@ -1478,6 +1568,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าสมาชิกอ่านร้านที่ตนบันทึกเป็นรายการโปรดได้",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Favorite restaurant appears\", function () { pm.expect(pm.response.json().items.some(function(r){return r.id===Number(pm.environment.get(\"restaurantId\"));})).to.eql(true); });"
             ]
@@ -1498,7 +1589,8 @@
         "url": "{{baseUrl}}/api/favorites",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่ารายการโปรดของสมาชิกคนที่สองไม่มีข้อมูลของสมาชิกคนแรก"
       },
       "event": [
         {
@@ -1506,6 +1598,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารายการโปรดของสมาชิกคนที่สองไม่มีข้อมูลของสมาชิกคนแรก",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Empty items array\", function () { pm.expect(pm.response.json().items).to.eql([]); });"
             ]
@@ -1539,7 +1632,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเพิ่มร้านที่ไม่มีอยู่ในรายการโปรดตอบ 404"
       },
       "event": [
         {
@@ -1547,6 +1641,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเพิ่มร้านที่ไม่มีอยู่ในรายการโปรดตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -1566,7 +1661,8 @@
         "url": "{{baseUrl}}/api/favorites/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ลบร้านโปรดของสมาชิกเจ้าของรายการ"
       },
       "event": [
         {
@@ -1574,6 +1670,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ลบร้านโปรดของสมาชิกเจ้าของรายการ",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -1593,7 +1690,8 @@
         "url": "{{baseUrl}}/api/favorites/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าลบรายการโปรดที่ถูกลบไปแล้วตอบ 404"
       },
       "event": [
         {
@@ -1601,6 +1699,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าลบรายการโปรดที่ถูกลบไปแล้วตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -1633,7 +1732,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "เพิ่มร้านโปรดอีกครั้งเพื่อเตรียมตรวจ cascade เมื่อลบร้าน"
       },
       "event": [
         {
@@ -1641,6 +1741,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: เพิ่มร้านโปรดอีกครั้งเพื่อเตรียมตรวจ cascade เมื่อลบร้าน",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });"
             ]
           }
@@ -1660,7 +1761,8 @@
         "url": "{{baseUrl}}/api/reviews/{{reviewId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ให้เจ้าของลบรีวิวของตนเอง"
       },
       "event": [
         {
@@ -1668,6 +1770,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้เจ้าของลบรีวิวของตนเอง",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -1682,7 +1785,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าหลังลบรีวิวสุดท้าย rating เป็น null และ reviewCount เป็นศูนย์"
       },
       "event": [
         {
@@ -1690,6 +1794,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าหลังลบรีวิวสุดท้าย rating เป็น null และ reviewCount เป็นศูนย์",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Empty aggregate is null\", function () { const j=pm.response.json(); pm.expect(j.rating).to.eql(null); pm.expect(j.reviewCount).to.eql(0); });"
             ]
@@ -1723,7 +1828,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "สร้างรีวิวใหม่เพื่อให้ admin ทดสอบการดูแลเนื้อหา"
       },
       "event": [
         {
@@ -1731,6 +1837,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: สร้างรีวิวใหม่เพื่อให้ admin ทดสอบการดูแลเนื้อหา",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"reviewId\", pm.response.json().id); }"
             ]
@@ -1751,7 +1858,8 @@
         "url": "{{baseUrl}}/api/admin/reviews/{{reviewId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ให้ admin ลบรีวิวผ่าน endpoint สำหรับผู้ดูแล"
       },
       "event": [
         {
@@ -1759,6 +1867,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin ลบรีวิวผ่าน endpoint สำหรับผู้ดูแล",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -1791,7 +1900,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "สร้างรีวิวอีกครั้งเพื่อทดสอบสิทธิ์ admin บน endpoint ลบรีวิวทั่วไป"
       },
       "event": [
         {
@@ -1799,6 +1909,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: สร้างรีวิวอีกครั้งเพื่อทดสอบสิทธิ์ admin บน endpoint ลบรีวิวทั่วไป",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"reviewId\", pm.response.json().id); }"
             ]
@@ -1819,7 +1930,8 @@
         "url": "{{baseUrl}}/api/reviews/{{reviewId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า admin ใช้ endpoint รีวิวทั่วไปเพื่อลบรีวิวของผู้อื่นได้"
       },
       "event": [
         {
@@ -1827,6 +1939,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า admin ใช้ endpoint รีวิวทั่วไปเพื่อลบรีวิวของผู้อื่นได้",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -1859,7 +1972,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "สร้างรีวิวสำหรับตรวจการลบตามเมื่อลบร้าน"
       },
       "event": [
         {
@@ -1867,6 +1981,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: สร้างรีวิวสำหรับตรวจการลบตามเมื่อลบร้าน",
               "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
               "if (pm.response.code < 300) { pm.environment.set(\"reviewId\", pm.response.json().id); }"
             ]
@@ -1887,7 +2002,8 @@
         "url": "{{baseUrl}}/api/admin/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า member ลบร้านผ่าน endpoint สำหรับ admin ไม่ได้"
       },
       "event": [
         {
@@ -1895,6 +2011,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า member ลบร้านผ่าน endpoint สำหรับ admin ไม่ได้",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -1914,7 +2031,8 @@
         "url": "{{baseUrl}}/api/admin/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ให้ admin ลบเฉพาะร้านที่สร้างในรอบทดสอบนี้"
       },
       "event": [
         {
@@ -1922,6 +2040,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// เตรียมคำขอ: ให้ admin ลบเฉพาะร้านที่สร้างในรอบทดสอบนี้",
               "if (!pm.environment.get(\"ownedRestaurantId\") || String(pm.environment.get(\"restaurantId\")) !== String(pm.environment.get(\"ownedRestaurantId\"))) { throw new Error(\"Refusing to delete a restaurant not created by this run\"); }"
             ]
           }
@@ -1931,6 +2050,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin ลบเฉพาะร้านที่สร้างในรอบทดสอบนี้",
               "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
             ]
           }
@@ -1945,7 +2065,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าร้านที่ลบไปแล้วอ่านรายละเอียดไม่ได้"
       },
       "event": [
         {
@@ -1953,6 +2074,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าร้านที่ลบไปแล้วอ่านรายละเอียดไม่ได้",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -1967,7 +2089,8 @@
         "url": "{{baseUrl}}/api/restaurants/{{restaurantId}}/reviews",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าการอ่านรีวิวของร้านที่ถูกลบตอบ 404"
       },
       "event": [
         {
@@ -1975,6 +2098,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการอ่านรีวิวของร้านที่ถูกลบตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -1994,7 +2118,8 @@
         "url": "{{baseUrl}}/api/favorites",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่ารายการโปรดที่อ้างถึงร้านถูกลบตามด้วย cascade"
       },
       "event": [
         {
@@ -2002,6 +2127,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารายการโปรดที่อ้างถึงร้านถูกลบตามด้วย cascade",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Empty items array\", function () { pm.expect(pm.response.json().items).to.eql([]); });"
             ]
@@ -2022,7 +2148,8 @@
         "url": "{{baseUrl}}/api/reviews/{{reviewId}}",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่ารีวิวที่อ้างถึงร้านถูกลบตามแล้ว"
       },
       "event": [
         {
@@ -2030,6 +2157,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่ารีวิวที่อ้างถึงร้านถูกลบตามแล้ว",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -2044,7 +2172,8 @@
         "url": "{{baseUrl}}/api/not-an-endpoint",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าเส้นทางที่ไม่มีอยู่ตอบ JSON error แบบ 404"
       },
       "event": [
         {
@@ -2052,6 +2181,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าเส้นทางที่ไม่มีอยู่ตอบ JSON error แบบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -2071,7 +2201,8 @@
         "url": "{{baseUrl}}/api/favorites",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า method ที่ endpoint ไม่รองรับตอบ JSON error แบบ 405"
       },
       "event": [
         {
@@ -2079,6 +2210,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า method ที่ endpoint ไม่รองรับตอบ JSON error แบบ 405",
               "pm.test(\"HTTP 405\", function () { pm.response.to.have.status(405); });"
             ]
           }
@@ -2093,7 +2225,8 @@
         "url": "{{baseUrl}}/api/restaurants?q=%27%20OR%201%3D1%20--",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่าตัวอักษร SQL ในคำค้นถูกค้นเป็นข้อมูลธรรมดา; ยกเว้นผล WAF เฉพาะเมื่อเปิดตัวเลือกและเงื่อนไขครบ"
       },
       "event": [
         {
@@ -2101,6 +2234,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าตัวอักษร SQL ในคำค้นถูกค้นเป็นข้อมูลธรรมดา; ยกเว้นผล WAF เฉพาะเมื่อเปิดตัวเลือกและเงื่อนไขครบ",
               "if (pm.variables.get(\"__edgeSqlProbeBlocked\") === true) {",
               "  pm.test(\"HTTP 403 from upstream WAF\", function () { pm.response.to.have.status(403); });",
               "  pm.test(\"SQL probe blocked by identified upstream WAF\", function () {",
@@ -2138,7 +2272,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่า guest เปลี่ยนสิทธิ์สมาชิกไม่ได้"
       },
       "event": [
         {
@@ -2146,6 +2281,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า guest เปลี่ยนสิทธิ์สมาชิกไม่ได้",
               "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
             ]
           }
@@ -2178,7 +2314,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่า member เปลี่ยนสิทธิ์สมาชิกไม่ได้"
       },
       "event": [
         {
@@ -2186,6 +2323,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า member เปลี่ยนสิทธิ์สมาชิกไม่ได้",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -2218,7 +2356,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่า payload เปลี่ยนสิทธิ์ที่มีฟิลด์เกินจาก role ถูกปฏิเสธ"
       },
       "event": [
         {
@@ -2226,6 +2365,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า payload เปลี่ยนสิทธิ์ที่มีฟิลด์เกินจาก role ถูกปฏิเสธ",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
@@ -2258,7 +2398,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการเปลี่ยนสิทธิ์ของสมาชิกที่ไม่มีอยู่ตอบ 404"
       },
       "event": [
         {
@@ -2266,6 +2407,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการเปลี่ยนสิทธิ์ของสมาชิกที่ไม่มีอยู่ตอบ 404",
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
             ]
           }
@@ -2298,7 +2440,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่า admin เปลี่ยน role บัญชีของตนเองไม่ได้"
       },
       "event": [
         {
@@ -2306,6 +2449,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า admin เปลี่ยน role บัญชีของตนเองไม่ได้",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -2338,7 +2482,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ให้ admin เลื่อนสมาชิกที่สร้างในรอบทดสอบเป็น admin"
       },
       "event": [
         {
@@ -2346,6 +2491,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin เลื่อนสมาชิกที่สร้างในรอบทดสอบเป็น admin",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Updated Member\", function () { const j=pm.response.json(); pm.expect(j).to.have.all.keys(\"id\",\"email\",\"displayName\",\"role\"); pm.expect(j.id).to.eql(Number(pm.environment.get(\"memberId\"))); pm.expect(j.role).to.eql(\"admin\"); });"
             ]
@@ -2366,7 +2512,8 @@
         "url": "{{baseUrl}}/api/me",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า JWT เดิมอ่านโปรไฟล์แล้วเห็น role ใหม่ทันที"
       },
       "event": [
         {
@@ -2374,6 +2521,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า JWT เดิมอ่านโปรไฟล์แล้วเห็น role ใหม่ทันที",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Promoted profile\", function () { pm.expect(pm.response.json().role).to.eql(\"admin\"); });"
             ]
@@ -2394,7 +2542,8 @@
         "url": "{{baseUrl}}/api/admin/members",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า JWT เดิมใช้ endpoint สำหรับ admin ได้หลังเลื่อนสิทธิ์"
       },
       "event": [
         {
@@ -2402,6 +2551,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า JWT เดิมใช้ endpoint สำหรับ admin ได้หลังเลื่อนสิทธิ์",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
             ]
           }
@@ -2434,7 +2584,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ส่ง role เดิมซ้ำและตรวจว่าได้ข้อมูลสมาชิกเดิมอย่างถูกต้อง"
       },
       "event": [
         {
@@ -2442,6 +2593,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ส่ง role เดิมซ้ำและตรวจว่าได้ข้อมูลสมาชิกเดิมอย่างถูกต้อง",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Updated Member\", function () { const j=pm.response.json(); pm.expect(j).to.have.all.keys(\"id\",\"email\",\"displayName\",\"role\"); pm.expect(j.id).to.eql(Number(pm.environment.get(\"memberId\"))); pm.expect(j.role).to.eql(\"admin\"); });"
             ]
@@ -2475,7 +2627,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าสมาชิกที่เพิ่งได้สิทธิ์ admin ก็ยังแก้ role ของตนเองไม่ได้"
       },
       "event": [
         {
@@ -2483,6 +2636,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าสมาชิกที่เพิ่งได้สิทธิ์ admin ก็ยังแก้ role ของตนเองไม่ได้",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -2515,7 +2669,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ให้ admin คนเดิมคืน role ของสมาชิกทดสอบเป็น member"
       },
       "event": [
         {
@@ -2523,6 +2678,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ให้ admin คนเดิมคืน role ของสมาชิกทดสอบเป็น member",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Member role restored\", function () { pm.expect(pm.response.json().role).to.eql(\"member\"); pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get(\"memberId\"))); });"
             ]
@@ -2543,7 +2699,8 @@
         "url": "{{baseUrl}}/api/admin/members",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า JWT เดิมหมดสิทธิ์เข้า endpoint สำหรับ admin หลังลดสิทธิ์"
       },
       "event": [
         {
@@ -2551,6 +2708,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า JWT เดิมหมดสิทธิ์เข้า endpoint สำหรับ admin หลังลดสิทธิ์",
               "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
             ]
           }
@@ -2570,7 +2728,8 @@
         "url": "{{baseUrl}}/api/me",
         "auth": {
           "type": "noauth"
-        }
+        },
+        "description": "ตรวจว่า JWT เดิมยังใช้โปรไฟล์และสิทธิ์ member ได้หลังลดสิทธิ์"
       },
       "event": [
         {
@@ -2578,6 +2737,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่า JWT เดิมยังใช้โปรไฟล์และสิทธิ์ member ได้หลังลดสิทธิ์",
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "pm.test(\"Demoted profile\", function () { pm.expect(pm.response.json().role).to.eql(\"member\"); });"
             ]
@@ -2611,7 +2771,8 @@
               "language": "json"
             }
           }
-        }
+        },
+        "description": "ตรวจว่าการแก้โปรไฟล์ไม่สามารถส่ง role เพื่อเพิ่มสิทธิ์ตนเองได้"
       },
       "event": [
         {
@@ -2619,6 +2780,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// ตรวจผลคำขอ: ตรวจว่าการแก้โปรไฟล์ไม่สามารถส่ง role เพื่อเพิ่มสิทธิ์ตนเองได้",
               "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }

@@ -1,3 +1,4 @@
+// ไฟล์ internal/config/config_test.go: ทดสอบการอ่าน environment และการปฏิเสธค่าตั้งต้นที่ไม่ถูกต้อง
 package config
 
 import (
@@ -5,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestLoad ตั้ง environment ชั่วคราวเพื่อตรวจค่าเริ่มต้นพอร์ต รายการ origin และ configuration ที่ต้องถูกปฏิเสธ
 func TestLoad(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgresql://example:secret@localhost/db")
 	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))

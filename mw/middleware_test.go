@@ -1,3 +1,4 @@
+// ไฟล์ mw/middleware_test.go: ทดสอบ Bearer token, role ล่าสุด, CORS, panic recovery และข้อมูลที่บันทึกลง log
 package mw
 
 import (
@@ -15,17 +16,20 @@ import (
 	"thaifood-backend/store"
 )
 
+// memberRepository จำลองสมาชิก/error และบันทึก ID เพื่อทดสอบการโหลดตัวตนใน middleware
 type memberRepository struct {
 	member   store.Member
 	err      error
 	calledID int64
 }
 
+// MemberByID เก็บ ID ที่ถูกเรียกและคืนข้อมูลสมาชิกจำลองเพื่อยืนยันว่า middleware อ่านข้อมูลใหม่
 func (r *memberRepository) MemberByID(_ context.Context, id int64) (store.Member, error) {
 	r.calledID = id
 	return r.member, r.err
 }
 
+// assertError ตรวจสถานะและฟิลด์ code/message ของ JSON error จาก middleware
 func assertError(t *testing.T, w *httptest.ResponseRecorder, status int) {
 	t.Helper()
 	if w.Code != status {
@@ -39,6 +43,7 @@ func assertError(t *testing.T, w *httptest.ResponseRecorder, status int) {
 	}
 }
 
+// TestAuthenticationAndCurrentDatabaseRole เปลี่ยน role ในข้อมูลจำลองแล้วใช้ JWT เดิมตรวจว่าสิทธิ์มีผลทันที
 func TestAuthenticationAndCurrentDatabaseRole(t *testing.T) {
 	i := &auth.Issuer{Secret: []byte(strings.Repeat("s", 32))}
 	token, err := i.Issue(7)
@@ -78,6 +83,7 @@ func TestAuthenticationAndCurrentDatabaseRole(t *testing.T) {
 	}
 }
 
+// TestRejectMissingOrMalformedAuthorization ตรวจว่า header/token ผิดถูกปฏิเสธก่อนเรียกฐานข้อมูลหรือ handler
 func TestRejectMissingOrMalformedAuthorization(t *testing.T) {
 	i := &auth.Issuer{Secret: []byte(strings.Repeat("s", 32))}
 	token, _ := i.Issue(1)
@@ -97,12 +103,14 @@ func TestRejectMissingOrMalformedAuthorization(t *testing.T) {
 	}
 }
 
+// TestRoleRequiresMemberContext ตรวจว่าการตรวจ role ไม่อนุญาต request ที่ไม่มีสมาชิกใน context
 func TestRoleRequiresMemberContext(t *testing.T) {
 	w := httptest.NewRecorder()
 	RequireRole("admin", func(http.ResponseWriter, *http.Request) { t.Fatal("missing context allowed") })(w, httptest.NewRequest("GET", "/", nil))
 	assertError(t, w, 401)
 }
 
+// TestCORS ตรวจ exact origin, preflight, method และ headers รวมกรณีโดเมนปลอมที่ต่อท้ายชื่อโดเมนจริง
 func TestCORS(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
 	h := CORS([]string{"http://localhost:3000", "https://frontend.vercel.app"}, next)
@@ -141,6 +149,7 @@ func TestCORS(t *testing.T) {
 	}
 }
 
+// TestRecoverHidesPanic ตรวจว่า panic กลายเป็น JSON 500 โดยไม่ส่งข้อมูลลับใน panic กลับไป
 func TestRecoverHidesPanic(t *testing.T) {
 	w := httptest.NewRecorder()
 	Recover(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("database secret") })).ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
@@ -150,6 +159,7 @@ func TestRecoverHidesPanic(t *testing.T) {
 	}
 }
 
+// TestLoggingOmitsCredentialsAndQuery ตรวจว่า log มีสถานะและ path แต่ไม่มีรหัสผ่าน query หรือ Bearer token
 func TestLoggingOmitsCredentialsAndQuery(t *testing.T) {
 	var output bytes.Buffer
 	previous := log.Writer()

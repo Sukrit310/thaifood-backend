@@ -1,3 +1,4 @@
+// ไฟล์ auth/auth_test.go: ทดสอบการออก/ตรวจ JWT และความถูกต้องของการ hash รหัสผ่านโดยไม่ใช้ฐานข้อมูล
 package auth
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// TestIssueAndParse ตรวจว่าออก token แล้วอ่าน ID เดิมได้ และไม่รับ ID หรือ secret ที่ไม่ถูกต้อง
 func TestIssueAndParse(t *testing.T) {
 	i := &Issuer{Secret: []byte(strings.Repeat("s", 32))}
 	token, err := i.Issue(42)
@@ -26,6 +28,7 @@ func TestIssueAndParse(t *testing.T) {
 	}
 }
 
+// TestRejectInvalidTokens ตรวจการปฏิเสธ token หมดอายุ claims ไม่ครบ ลายเซ็นปลอม และอัลกอริทึมผิด
 func TestRejectInvalidTokens(t *testing.T) {
 	secret := []byte(strings.Repeat("s", 32))
 	i := &Issuer{Secret: secret, TTL: time.Hour}
@@ -68,6 +71,7 @@ func TestRejectInvalidTokens(t *testing.T) {
 	}
 }
 
+// TestPasswordHashing ตรวจการเทียบรหัสผ่าน salt ที่ต่างกัน และขีดจำกัดความยาวเป็นไบต์รวมข้อความภาษาไทย
 func TestPasswordHashing(t *testing.T) {
 	hash, err := HashPassword("Password123")
 	if err != nil {

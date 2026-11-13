@@ -1,3 +1,4 @@
+# ไฟล์นี้เป็น Blueprint ของ API บน Render โดย build จาก Dockerfile และใช้ฐานข้อมูลภายนอกผ่าน DATABASE_URL
 services:
   - type: web
     name: thaifood-guide-api
@@ -5,8 +6,11 @@ services:
     plan: free
     region: singapore
     branch: feat/thaifood-guide-backend
+    # Render เรียก endpoint นี้ตรวจความพร้อมของ API ซึ่งรวมการเชื่อมต่อฐานข้อมูลด้วย
     healthCheckPath: /health
+    # ปิด deploy อัตโนมัติ เพื่อให้เลือกปล่อย revision ที่ตรวจสอบแล้ว
     autoDeployTrigger: 'off'
+    # ค่าที่ sync: false ต้องกรอกแยก; JWT_SECRET ให้ Render สร้างค่า และ PORT ใช้ 8080
     envVars:
       - key: DATABASE_URL
         sync: false
