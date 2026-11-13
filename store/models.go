@@ -11,6 +11,7 @@ var (
 	ErrConflict   = errors.New("conflict")
 	ErrForeignKey = errors.New("invalid reference")
 	ErrForbidden  = errors.New("forbidden")
+	ErrLastAdmin  = errors.New("last admin")
 )
 
 type Member struct {
@@ -85,6 +86,7 @@ type Repository interface {
 	MemberByEmail(context.Context, string) (Member, error)
 	MemberByID(context.Context, int64) (Member, error)
 	UpdateMember(context.Context, int64, string) (Member, error)
+	UpdateMemberRole(context.Context, int64, int64, string) (Member, error)
 	UpdatePassword(context.Context, int64, string, string) error
 	ListMembers(context.Context) ([]Member, error)
 	ListProvinces(context.Context) ([]Province, error)

@@ -3,7 +3,7 @@
     "_postman_id": "1d820b10-b73e-4594-8ef5-5d68ce54df8d",
     "name": "ThaiFood Guide API Contract v2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control. The allowEdgeSqlProbeBlock environment option defaults to false. Opt in only for Render-hosted verification to classify the final SQL-injection probe as blocked by the positively identified upstream Cloudflare WAF; all application responses remain strict Contract checks. See postman/README.md."
+    "description": "Run in order against an isolated test database. Covers every Contract v2 endpoint and error/role/cascade cases. Set baseUrl, adminEmail and adminPassword in a private environment. Register the admin account first and promote it with go run . admin EMAIL. Generates two unique member accounts; they remain in the test database because the Contract has no member deletion endpoint. Creates and deletes only its own sample restaurant; never modifies seed restaurants. Generated token/password variables remain in the in-memory Newman environment unless explicitly exported. Do not export real credentials into version control. The allowEdgeSqlProbeBlock environment option defaults to false. Opt in only for Render-hosted verification to classify SQL-injection probe 64 as blocked by the positively identified upstream Cloudflare WAF; all application responses remain strict Contract checks. See postman/README.md. Requests 65–78 cover admin role management using only the generated member; request 75 restores its member role. If the run is interrupted after promotion, use the admin account to demote that test member."
   },
   "event": [
     {
@@ -21,7 +21,7 @@
           "  pm.environment.set(\"newPassword\", \"Changed-\" + run);",
           "  pm.environment.set(\"restaurantName\", \"Postman sample \" + run);",
           "  pm.environment.set(\"invalidToken\", \"invalid-token\");",
-          "  [\"restaurantId\", \"ownedRestaurantId\", \"reviewId\", \"memberToken\", \"otherToken\", \"adminToken\"].forEach(function(k){ pm.environment.unset(k); });",
+          "  [\"restaurantId\", \"ownedRestaurantId\", \"reviewId\", \"memberToken\", \"otherToken\", \"adminToken\", \"adminId\", \"memberId\"].forEach(function(k){ pm.environment.unset(k); });",
           "}"
         ]
       }
@@ -837,7 +837,8 @@
             "exec": [
               "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "if (pm.response.code < 300) { pm.environment.set(\"adminToken\", pm.response.json().token); }",
-              "pm.test(\"Trusted admin role\", function () { pm.expect(pm.response.json().member.role).to.eql(\"admin\"); });"
+              "pm.test(\"Trusted admin role\", function () { pm.expect(pm.response.json().member.role).to.eql(\"admin\"); });",
+              "if (pm.response.code === 200) { pm.environment.set(\"adminId\", pm.response.json().member.id); }"
             ]
           }
         }
@@ -2110,6 +2111,515 @@
               "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
               "  pm.test(\"SQL input is a literal search\", function () { pm.expect(pm.response.json().items).to.eql([]); pm.expect(pm.response.json().total).to.eql(0); });",
               "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "65 Guest cannot change roles",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "66 Member cannot change roles",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "67 Reject extra role fields",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\",\"actorId\":1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "68 Missing role target",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/9223372036854775807/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "69 Admin cannot change own role",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{adminId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"member\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "70 Promote run owned member",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Updated Member\", function () { const j=pm.response.json(); pm.expect(j).to.have.all.keys(\"id\",\"email\",\"displayName\",\"role\"); pm.expect(j.id).to.eql(Number(pm.environment.get(\"memberId\"))); pm.expect(j.role).to.eql(\"admin\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "71 Original JWT sees promotion",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/me",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Promoted profile\", function () { pm.expect(pm.response.json().role).to.eql(\"admin\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "72 Original JWT gains admin access",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "73 Same role is idempotent",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Updated Member\", function () { const j=pm.response.json(); pm.expect(j).to.have.all.keys(\"id\",\"email\",\"displayName\",\"role\"); pm.expect(j.id).to.eql(Number(pm.environment.get(\"memberId\"))); pm.expect(j.role).to.eql(\"admin\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "74 Promoted admin cannot change self",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"member\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "75 Restore run owned member role",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members/{{memberId}}/role",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"member\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Member role restored\", function () { pm.expect(pm.response.json().role).to.eql(\"member\"); pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get(\"memberId\"))); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "76 Original JWT loses admin access",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/members",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "77 Original JWT keeps member access",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/me",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Demoted profile\", function () { pm.expect(pm.response.json().role).to.eql(\"member\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "78 Profile cannot escalate role",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{memberToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"displayName\":\"Postman Member\",\"role\":\"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
             ]
           }
         }

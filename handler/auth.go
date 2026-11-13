@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/mail"
@@ -143,4 +144,34 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items(w, list)
+}
+
+func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
+	targetID, err := id(r, "id")
+	if err != nil {
+		bad(w, err)
+		return
+	}
+	// A map also rejects differently cased keys, which struct decoding accepts.
+	var in map[string]json.RawMessage
+	if err := body(w, r, &in); err != nil {
+		bad(w, err)
+		return
+	}
+	var role string
+	if len(in) != 1 || json.Unmarshal(in["role"], &role) != nil || (role != "member" && role != "admin") {
+		bad(w, errors.New("Only role is allowed and must be member or admin"))
+		return
+	}
+	actor, _ := mw.Member(r.Context())
+	if actor.ID == targetID {
+		storeError(w, store.ErrForbidden)
+		return
+	}
+	updated, err := h.Store.UpdateMemberRole(r.Context(), actor.ID, targetID, role)
+	if err != nil {
+		storeError(w, err)
+		return
+	}
+	write(w, 200, updated)
 }

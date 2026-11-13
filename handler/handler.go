@@ -49,6 +49,7 @@ func (h *Handler) Routes() http.Handler {
 	add("POST", "/api/favorites", login(h.CreateFavorite))
 	add("DELETE", "/api/favorites/{restaurantId}", login(h.DeleteFavorite))
 	add("GET", "/api/admin/members", admin(h.ListMembers))
+	add("PATCH", "/api/admin/members/{id}/role", admin(h.UpdateMemberRole))
 	add("POST", "/api/admin/restaurants", admin(h.CreateRestaurant))
 	add("PUT", "/api/admin/restaurants/{id}", admin(h.UpdateRestaurant))
 	add("DELETE", "/api/admin/restaurants/{id}", admin(h.DeleteRestaurant))
@@ -95,6 +96,8 @@ func storeError(w http.ResponseWriter, err error) {
 		fail(w, 400, "INVALID_REFERENCE", "Province or category does not exist")
 	case errors.Is(err, store.ErrForbidden):
 		fail(w, 403, "FORBIDDEN", "You do not have permission for this action")
+	case errors.Is(err, store.ErrLastAdmin):
+		fail(w, 409, "LAST_ADMIN", "At least one admin must remain")
 	default:
 		fail(w, 500, "INTERNAL_ERROR", "Unable to complete the request")
 	}

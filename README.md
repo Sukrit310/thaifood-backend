@@ -8,7 +8,7 @@ Go REST API ตาม [Project Brief v2](ThaiFood_Guide_Project_Brief_v2.md) แ
 
 - Guest ดูจังหวัด 77 จังหวัด ประเภทอาหาร ร้าน รายละเอียด รีวิว และค้นหา/กรอง/แบ่งหน้า
 - Member สมัคร/เข้าสู่ระบบ แก้ชื่อ เปลี่ยนรหัสผ่าน เขียน/ลบรีวิวของตนเอง และจัดการ Favorites
-- Admin ดูสมาชิก เพิ่ม/แก้/ลบร้าน และลบรีวิว โดย Go ตรวจ role ปัจจุบันจากฐานข้อมูลทุก protected request
+- Admin ดูสมาชิก เปลี่ยนสิทธิ์สมาชิกคนอื่น เพิ่ม/แก้/ลบร้าน และลบรีวิว โดย Go ตรวจ role ปัจจุบันจากฐานข้อมูลทุก protected request
 - JWT อายุ 1 ชั่วโมง; Register รับเฉพาะ member; ไม่ส่ง password hash ใน JSON
 - คะแนน 1–5 คำนวณจากรีวิวในฐานข้อมูล ร้านไม่มีรีวิวส่ง `rating: null`, `reviewCount: 0`
 - Error รูปแบบเดียวกัน: `{"error":{"code":"...","message":"..."}}`
@@ -68,7 +68,7 @@ Go เป็นผู้เข้าถึงฐานข้อมูลเพ�
 go run . admin your-admin@example.com
 ```
 
-คำสั่งนี้เลื่อนสิทธิ์ของบัญชีที่มีอยู่แล้วเท่านั้น ไม่มีรหัสผ่าน Admin เริ่มต้นและไม่มี public API ที่เปลี่ยน role ได้ การเพิ่ม `role` ใน Register หรือ Profile จะถูกปฏิเสธ
+คำสั่งนี้ใช้สร้าง Admin คนแรกจากบัญชีที่มีอยู่แล้ว ไม่มีรหัสผ่าน Admin เริ่มต้น หลังจากนั้น Admin ใช้ `PATCH /api/admin/members/{id}/role` เพื่อเปลี่ยนสิทธิ์ของคนอื่นได้ ห้ามเปลี่ยนบัญชีตัวเองและต้องเหลือ Admin อย่างน้อยหนึ่งคน การเพิ่ม `role` ใน Register หรือ Profile ยังคงถูกปฏิเสธ ดู [วิธีทดสอบและส่งต่อส่วนจัดการสิทธิ์](docs/ADMIN_ROLE_MANAGEMENT.md)
 
 ## API และ Validation
 
@@ -81,6 +81,7 @@ go run . admin your-admin@example.com
 - `page=1`, `limit=12`; limit เกิน 50 ใช้ 50; page/limit ไม่ใช่จำนวนเต็มบวกตอบ 400
 - Admin POST ร้านต้องมี name, provinceId, categoryId, address, description; พิกัดเลือกใส่ได้แต่ต้องเป็นคู่และอยู่ในช่วงที่ถูกต้อง; imageUrl รับ HTTP(S) หรือ null
 - Admin PUT ร้านส่งเฉพาะฟิลด์ที่แก้ได้ โดยฟิลด์ที่ละไว้คงเดิม; `imageUrl: null` ล้างรูป
+- Admin PATCH สิทธิ์สมาชิกส่งเพียง `role` เป็น `member`/`admin`; ส่งค่าเดิมของคนอื่นตอบ 200 แบบ idempotent และ role ใหม่มีผลกับ JWT เดิมใน request ถัดไป
 - JSON ต้องเป็น object เดียว ไม่รับฟิลด์ไม่รู้จัก ขนาดไม่เกิน 1 MiB
 - ไม่พบข้อมูลตอบ 404, ข้อมูลซ้ำ 409, ไม่มี/Token ผิด/หมดอายุ 401, สิทธิ์ไม่พอ 403, database failure 500 แบบไม่เปิดเผยข้อมูลลับ
 
@@ -93,6 +94,7 @@ Unit tests รันได้โดยไม่ใช้ DB; integration tests �
 ```bash
 go test -race -count=1 ./...
 go vet ./...
+go build ./...
 go build -trimpath -o bin/thaifood .
 ```
 

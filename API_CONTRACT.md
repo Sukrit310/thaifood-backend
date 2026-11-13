@@ -98,12 +98,50 @@ Logout สำหรับ MVP: FE ลบ Token และข้อมูลผู
 | Method | Endpoint | Request/หมายเหตุ | Response |
 |---|---|---|---|
 | GET | `/api/admin/members` | JWT role admin | `{ "items": Member[] }` |
+| PATCH | `/api/admin/members/{id}/role` | JWT role admin; `{"role":"member"}` หรือ `{"role":"admin"}` | `200` และ `Member` ที่อัปเดตแล้ว |
 | POST | `/api/admin/restaurants` | ชื่อร้าน, `provinceId`, `categoryId`, ที่อยู่, รายละเอียด, พิกัดและ `imageUrl` | `201` และ `Restaurant` |
 | PUT | `/api/admin/restaurants/{id}` | ฟิลด์ร้านอาหารที่แก้ไข | `200` และ `Restaurant` |
 | DELETE | `/api/admin/restaurants/{id}` | JWT role admin | `204` |
 | DELETE | `/api/admin/reviews/{id}` | JWT role admin | `204` |
 
 ห้ามสมัคร Admin ผ่าน Register; BE ต้องตรวจ Role จากข้อมูลที่เชื่อถือได้ และไม่รับค่า Role จากผู้สมัคร
+
+### เปลี่ยนสิทธิ์สมาชิก
+
+```http
+PATCH /api/admin/members/2/role
+Authorization: Bearer <ADMIN_JWT>
+Content-Type: application/json
+
+{"role":"admin"}
+```
+
+ตัวอย่าง `200 OK` ใช้ Member object เดียวกับ `GET /api/me` และแต่ละ item ใน `GET /api/admin/members` โดยไม่มี wrapper:
+
+```json
+{"id":2,"email":"member@example.com","displayName":"สมาชิกตัวอย่าง","role":"admin"}
+```
+
+- `{id}` ต้องเป็น integer บวกในช่วง int64 และมีบัญชีอยู่จริง
+- Body ต้องเป็น JSON object เดียว ขนาดไม่เกิน 1 MiB มีเพียง key `role` (ตัวพิมพ์เล็ก) ค่าเป็น string `member` หรือ `admin` ตรงตัว ไม่รับ null, ฟิลด์เกิน, JSON ผิดรูปแบบ หรือ role อื่น
+- ต้องใช้ JWT ของ Admin; identity มาจาก JWT ที่ยืนยันแล้วและตรวจ role ปัจจุบันจาก DB ไม่รับ identity ผู้สั่งจาก body
+- ห้ามเปลี่ยน role ของตัวเอง แม้ส่ง role เดิม (`403 FORBIDDEN`)
+- เปลี่ยน role ของคนอื่นเป็นค่าเดิมได้แบบ idempotent: `200` พร้อม Member ปัจจุบัน และไม่แก้ `updated_at`
+- ตรวจสิทธิ์ผู้สั่งซ้ำหลังได้ lock ใน transaction; คำขอที่ค้างอยู่จาก Admin ที่ถูกลดสิทธิ์แล้วถูกปฏิเสธด้วย `403`
+- ตรวจจำนวน Admin ก่อนลดสิทธิ์เป็น defense in depth; ต้องเหลือ Admin อย่างน้อยหนึ่งคน กรณี Admin สองคนลดสิทธิ์กันพร้อมกัน สำเร็จหนึ่งคำขอ อีกคำขอได้ `403`
+- JWT เดิมของเป้าหมายได้รับ/สูญเสียสิทธิ์ Admin ตั้งแต่ protected request ถัดไป ไม่ต้อง login ใหม่; หลังลดสิทธิ์ยังใช้ member endpoints ได้
+- Register/Profile ยังคงไม่รับ `role` และไม่สามารถใช้ยกระดับสิทธิ์
+
+| สถานการณ์ | HTTP | error.code |
+|---|---|---|
+| ไม่ส่ง JWT, JWT ผิด/หมดอายุ หรือบัญชีผู้สั่งไม่มีแล้ว | 401 | `UNAUTHORIZED` |
+| ผู้สั่งเป็น member, ถูกลดสิทธิ์ระหว่างรอ หรือแก้บัญชีตัวเอง | 403 | `FORBIDDEN` |
+| id/body/role ไม่ถูกต้อง | 400 | `VALIDATION_ERROR` |
+| ไม่พบสมาชิกเป้าหมาย | 404 | `NOT_FOUND` |
+| การลดสิทธิ์ขัดกับการคง Admin คนสุดท้าย (defense in depth) | 409 | `LAST_ADMIN` |
+| Database/Server ขัดข้อง | 500 | `INTERNAL_ERROR` |
+
+Error ใช้ envelope เดิม เช่น `{"error":{"code":"FORBIDDEN","message":"You do not have permission for this action"}}` โดยไม่ส่ง SQL, password hash หรือ secret กลับไป การตรวจ self-change มีผลก่อน last-admin guard จึงตอบ `403` เมื่อ Admin คนสุดท้ายพยายามลดสิทธิ์ตัวเอง
 
 ## 6. Integration Checklist
 
